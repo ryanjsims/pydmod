@@ -1,0 +1,7 @@
+__pycache__
+*.dme
+*.stl
+*.obj
+*.gltf
+*.glb
+dbg-pack-master
