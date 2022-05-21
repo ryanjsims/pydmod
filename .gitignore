@@ -1,7 +1,9 @@
 __pycache__
+models
 *.dme
 *.stl
 *.obj
 *.gltf
 *.glb
 dbg-pack-master
+venv

@@ -4,7 +4,7 @@ import json
 import os
 import logging
 from io import BytesIO
-from typing import List, Tuple, Dict
+from typing import List, Optional, Tuple, Dict
 from enum import IntEnum
 from aabbtree import AABB
 
@@ -12,13 +12,18 @@ from . import jenkins
 from .data_classes import *
 
 logger = logging.getLogger("dme_loader")
-logger.setLevel(logging.DEBUG)
 
 with open(os.path.join(os.path.dirname(__file__), "materials.json")) as f:
     materialsJson: Dict[str, Dict[str, Dict]] = json.load(f)
 
+with open(os.path.join(os.path.dirname(__file__), "materials_new.json")) as f:
+    materialsNewJson: Dict[str, Dict[str, Dict]] = json.load(f)
+
 InputLayouts = {int(key) : InputLayout.from_json(value) for key, value in materialsJson["inputLayouts"].items()}
 MaterialDefinitions = {int(key) : MaterialDefinition.from_json(value) for key, value in materialsJson["materialDefinitions"].items()}
+
+InputLayoutsNew = {key: InputLayout.from_json(value) for key, value in materialsNewJson["inputLayouts"].items()}
+MaterialDefinitionsNew = {int(key): MaterialDefinition.from_json(value) for key, value in materialsNewJson["materialDefinitions"].items()}
 
 input_layout_formats ={
     "Float3":       ("<fff", 12),
@@ -80,6 +85,19 @@ class DrawCall:
     
     def __len__(self):
         return 36
+    
+    def __str__(self):
+        return f"""DrawCall(
+    unknown0={self.unknown0},
+    bone_start={self.bone_start},
+    bone_count={self.bone_count},
+    delta={self.delta},
+    unknown1={self.unknown1},
+    vertex_offset={self.vertex_offset},
+    vertex_count={self.vertex_count},
+    index_offset={self.index_offset},
+    index_count={self.index_count}
+)"""
 
     @classmethod
     def load(cls, data: BytesIO):
@@ -215,10 +233,17 @@ class Mesh:
         for index_tuple in struct.iter_unpack(index_format, index_data):
             indices.append(index_tuple[0])
         
+        return cls(bpv_list, vertex_streams, vertices, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count, [], {}, [])
         draw_call_count = struct.unpack("<I", data.read(4))[0]
+        logger.warning(f"Loading {draw_call_count} draw calls")
+        logger.warning(f"\t draw count: {draw_count}")
+        logger.warning(f"At offset {data.tell()}")
         draw_calls = [DrawCall.load(data) for _ in range(draw_call_count)]
+        newline = '\n'
+        logger.warning(f"Draw calls:\n{newline.join([str(draw_call) for draw_call in draw_calls])}")
 
         bone_map_entry_count = struct.unpack("<I", data.read(4))[0]
+        logger.warning(f"Loading {bone_map_entry_count} bone map entries")
         bone_map_entries = [BoneMapEntry.load(data) for _ in range(bone_map_entry_count)]
         bone_map = {entry.bone_index: entry.global_index for entry in bone_map_entries}
 
@@ -299,13 +324,13 @@ class Parameter:
 
     @classmethod
     def load(cls, data: BytesIO) -> 'Parameter':
-        logger.info("Loading parameter")
+        logger.debug("Loading parameter")
         param_hash, param_class, param_type, length = struct.unpack("<IIII", data.read(16))
         param_data = data.read(length)
         t = D3DXParamType(param_type)
         c = D3DXParamClass(param_class)
-        logger.info(f"    type:  {t.name}")
-        logger.info(f"    class: {c.name}")
+        logger.debug(f"    type:  {t.name}")
+        logger.debug(f"    class: {c.name}")
 
         return cls(param_hash, c, t, param_data)
 
@@ -332,21 +357,49 @@ class Material:
         if self.__encoded_parameters is None:
             self.__encoded_parameters = b''.join([param.serialize() for param in self.parameters])
         return self.__encoded_parameters
+    
+    def input_layout(self, material_hash: Optional[int] = None, new_mats: bool = False) -> InputLayout:
+        input_layout = None
+        try:
+            usedhash = self.namehash if material_hash is None else material_hash
+            if not new_mats:
+                definition = MaterialDefinitions[usedhash]
+            else:
+                definition = MaterialDefinitionsNew[usedhash]
+            logger.info(f"Material definition '{definition.name}' found (name hash {usedhash})")
+        except KeyError:
+            logger.warning(f"Material definition not found for name hash {usedhash}! Defaulting to 'VehicleRigid_PS'")
+            definition = MaterialDefinitions[59309762] #"VehicleRigid_PS"
+            draw_style = definition.draw_styles[0]
+            input_layout = InputLayouts[2340912194] #"Vehicle"
+        
+        if not input_layout:
+            try:
+                draw_style = definition.draw_styles[0]
+                if not new_mats:
+                    layout_hash = jenkins.oaat(draw_style.input_layout.encode("utf-8"))
+                    input_layout = InputLayouts[layout_hash]
+                else:
+                    input_layout = InputLayoutsNew[draw_style.input_layout]
+                logger.info(f"Input Layout '{input_layout.name}' found (name hash {jenkins.oaat(draw_style.input_layout.encode('utf-8'))})")
+            except KeyError:
+                logger.warning(f"Input Layout not found for name hash {jenkins.oaat(draw_style.input_layout.encode('utf-8'))}! Defaulting to 'Vehicle'")
+                input_layout = InputLayouts[2340912194] #"Vehicle"
+        
+        return input_layout
 
     @classmethod
     def load(cls, data: BytesIO) -> 'Material':
-        logger.info("Loading material data")
         offset = 0
         namehash, length, definition, num_params = struct.unpack("<IIII", data.read(16))
-        logger.info(f"Name hash: {hex(namehash)}")
-        logger.info(f"Definition hash: {hex(definition)}")
-        logger.info(f"Parameter count: {num_params}")
+        logger.info(f"Material data - Name hash: 0x{namehash:08X}    Length: {length}    Definition hash: 0x{definition:08X}    Parameter count: {num_params}")
         offset += 16
         parameters = []
         for i in range(num_params):
             parameters.append(Parameter.load(data))
             offset += len(parameters[i])
         assert length + 8 == offset, f"Material data length different than stored length ({length + 8} !== {offset})"
+
         return cls(namehash, definition, parameters)
 
 class DMAT:
@@ -406,7 +459,7 @@ class DMAT:
             offset += len(materials[i])
         
         assert offset == dmat_length, "Data length does not match stored length!"
-
+        logger.info("DMAT chunk loaded")
         return cls(magic, version, texture_names, materials)
 
 class DME:
@@ -420,7 +473,7 @@ class DME:
         self.meshes = meshes
 
     @classmethod
-    def load(cls, data: BytesIO) -> 'DME':
+    def load(cls, data: BytesIO, material_hashes: Optional[List[int]] = None, new_mats: bool = False) -> 'DME':
         logger.info("Loading DME file")
         #DMOD block
         magic = data.read(4)
@@ -431,23 +484,20 @@ class DME:
         
         #DMAT block
         dmat = DMAT.load(data)
-        material = dmat.materials[0]
-        try:
-            definition = MaterialDefinitions[material.namehash]
-            draw_style = definition.draw_styles[0]
-            input_layout = InputLayouts[jenkins.oaat(draw_style.input_layout.encode("utf-8"))]
-        except KeyError:
-            logger.warning(f"Material definition not found for name hash {hex(material.namehash)}! Defaulting to 'VehicleRigid_PS'")
-            definition = MaterialDefinitions[59309762] #"VehicleRigid_PS"
-            draw_style = definition.draw_styles[0]
-            input_layout = InputLayouts[2340912194] #"Vehicle"
-        
         
         #MESH block
         minx, miny, minz = struct.unpack("<fff", data.read(12))
         maxx, maxy, maxz = struct.unpack("<fff", data.read(12))
         num_meshes = struct.unpack("<I", data.read(4))[0]
         aabb = AABB([(minx, maxx), (miny, maxy), (minz, maxz)])
-        meshes = [Mesh.load(data, input_layout) for _ in range(num_meshes)]
+        meshes = []
+        for i in range(num_meshes):
+            logger.info(f"Loading Mesh {i}")
+            material_hash = None
+            if material_hashes and i < len(material_hashes):
+                material_hash = material_hashes[i]
+            meshes.append(Mesh.load(data, dmat.materials[i].input_layout(material_hash, new_mats)))
+            logger.info(f"Mesh {i} loaded")
         
+        logger.info("DME file loaded")
         return cls(magic.decode("utf-8"), version, dmat, aabb, meshes)

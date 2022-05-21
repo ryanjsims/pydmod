@@ -14,7 +14,6 @@ handler.setFormatter(logging.Formatter(
     fmt="[%(asctime)s.%(msecs)03d - %(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 ))
-logging.basicConfig(level=logging.DEBUG, handlers=[handler])
 
 def to_stl(dme: DME, output: str):
     faces = []
@@ -52,7 +51,7 @@ def dme_to_gltk(dme: DME):
         vertices_bin = numpy.array(mesh.vertices, dtype=numpy.single).flatten().tobytes()
         indices_bin = numpy.array(mesh.indices, dtype=numpy.ushort if mesh.index_size == 2 else numpy.uintc).tobytes()
         normals_bin = numpy.array([[-n for n in normal] for normal in mesh.normals], dtype=numpy.single).flatten().tobytes()
-        tangents_bin = numpy.array([[*tangent[:3], -tangent[3]] for tangent in mesh.tangents], dtype=numpy.single).flatten().tobytes()
+        tangents_bin = numpy.array([[*tangent[:3], (-tangent[3]) if len(tangent) > 3 else (-1)] for tangent in mesh.tangents], dtype=numpy.single).flatten().tobytes()
         
         attributes = []
         attributes.append([POSITION, len(gltf.accessors)])
@@ -67,6 +66,7 @@ def dme_to_gltk(dme: DME):
         gltf.bufferViews.append(BufferView(
             buffer=0,
             byteStride=12,
+            byteOffset=offset,
             byteLength=len(vertices_bin),
             target=ARRAY_BUFFER
         ))
@@ -107,7 +107,7 @@ def dme_to_gltk(dme: DME):
             offset += len(normals_bin)
             blob += normals_bin
         
-        """
+        
         if mesh.tangents:
             attributes.append([TANGENT, len(gltf.accessors)])
             gltf.accessors.append(Accessor(
@@ -125,7 +125,7 @@ def dme_to_gltk(dme: DME):
             ))
             offset += len(tangents_bin)
             blob += tangents_bin
-        """
+        
         
         for i, uvs in mesh.uvs.items():
             bin = numpy.array(uvs, dtype=numpy.single).flatten().tobytes()
@@ -179,14 +179,33 @@ def to_gltf(dme: DME, output: str):
 def main():
     parser = ArgumentParser(description="DME v4 to GLTF/OBJ/STL converter")
     parser.add_argument("input_file", type=str)
-    parser.add_argument("output_file", type=str)
-    parser.add_argument("format", choices=["stl", "gltf", "obj", "glb"])
+    parser.add_argument("--output-file", "-o", type=str)
+    parser.add_argument("--format", "-f", choices=["stl", "gltf", "obj", "glb"])
+    parser.add_argument("--material-hashes", "-m", type=int, nargs="+")
+    parser.add_argument("--new-materials", "-n", action="store_true")
+    parser.add_argument("--dump-textures", "-t", action="store_true")
+    parser.add_argument("--verbose", "-v", help="Increase log level", action="count", default=0)
     args = parser.parse_args()
+
+    logging.basicConfig(level=max(logging.WARNING - 10 * args.verbose, logging.DEBUG), handlers=[handler])
+
     try:
-        output_path = Path(args.output_file)
-        tmp_output_path = output_path.with_suffix(".tmp")
         with open(args.input_file, "rb") as in_file:
-            dme = DME.load(in_file)
+            dme = DME.load(in_file, args.material_hashes, args.new_materials)
+        
+        if args.dump_textures:
+            for texture in dme.dmat.textures:
+                print(texture)
+            return 0
+        
+        if not args.format:
+            logging.error("File format is required for conversion!")
+            return 1
+        if not args.output_file:
+            output_path = Path(args.input_file).with_suffix("." + args.format)
+        else:
+            output_path = Path(args.output_file)
+        tmp_output_path = output_path.with_suffix(".tmp")
         
         if args.format == "obj":
             with open(tmp_output_path, "w") as output:
@@ -200,9 +219,9 @@ def main():
 
         os.replace(tmp_output_path, output_path)
     except FileNotFoundError:
-        print(f"Error: Could not find {args.input_file}", file=sys.stderr)
+        logging.error(f"Could not find {args.input_file}")
     except AssertionError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logging.error(f"{e}")
     
 
 
