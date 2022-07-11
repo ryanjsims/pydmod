@@ -6,6 +6,19 @@ from argparse import ArgumentParser
 import jenkins
 
 
+data_type_sizes ={
+    "Float3":       12,
+    "D3dcolor":     4,
+    "Float2":       8,
+    "Float4":       16,
+    "ubyte4n":      4,
+    "Float16_2":    4,
+    "float16_2":    4,
+    "Short2":       4,
+    "Float1":       4,
+    "Short4":       8
+}
+
 def main():
     parser = ArgumentParser(description="Converts a materials xml file to json for use in dme loading")
     parser.add_argument("input", help="Input file name of xml data")
@@ -60,16 +73,21 @@ def main():
     for input_layout in input_layouts:
         name = input_layout.get("Name")
         entries = []
+        sizes = {}
         for entry_node in input_layout[0]:
             entry = {}
             for key, value in entry_node.attrib.items():
                 if key == "Class":
                     continue
-                string
+                if key == "Type":
+                    if entry_node.attrib["Stream"] not in sizes:
+                        sizes[entry_node.attrib["Stream"]] = 0
+                    sizes[entry_node.attrib["Stream"]] += data_type_sizes[value]
                 entry[key[0].lower() + key[1:]] = value if not value.isnumeric() else int(value)
             entries.append(entry)
         layout_dict[name] = {
             "name": name,
+            "sizes": sizes,
             "hash": jenkins.oaat(name.encode("utf-8")),
             "entries": entries
         }
