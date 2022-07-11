@@ -5,5 +5,5 @@ models
 *.obj
 *.gltf
 *.glb
-dbg-pack-master
+dbg-pack*
 venv
