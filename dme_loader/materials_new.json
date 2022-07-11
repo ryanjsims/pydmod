@@ -2,6 +2,9 @@
     "inputLayouts": {
         "NULL": {
             "name": "NULL",
+            "sizes": {
+                "0": 12
+            },
             "hash": 547305954,
             "entries": [
                 {
@@ -14,6 +17,9 @@
         },
         "Position": {
             "name": "Position",
+            "sizes": {
+                "0": 12
+            },
             "hash": 210930065,
             "entries": [
                 {
@@ -26,6 +32,10 @@
         },
         "POS_TEX": {
             "name": "POS_TEX",
+            "sizes": {
+                "0": 12,
+                "1": 8
+            },
             "hash": 2300240385,
             "entries": [
                 {
@@ -44,6 +54,10 @@
         },
         "POS_TEX2": {
             "name": "POS_TEX2",
+            "sizes": {
+                "0": 12,
+                "1": 16
+            },
             "hash": 3640375831,
             "entries": [
                 {
@@ -68,6 +82,10 @@
         },
         "POS_TEX2_SKINBONE": {
             "name": "POS_TEX2_SKINBONE",
+            "sizes": {
+                "0": 12,
+                "1": 20
+            },
             "hash": 305750074,
             "entries": [
                 {
@@ -98,6 +116,10 @@
         },
         "POS_TEX2_SKINWEIGHTS": {
             "name": "POS_TEX2_SKINWEIGHTS",
+            "sizes": {
+                "0": 12,
+                "1": 24
+            },
             "hash": 3587084103,
             "entries": [
                 {
@@ -132,26 +154,11 @@
                 }
             ]
         },
-        "POS_COLOR": {
-            "name": "POS_COLOR",
-            "hash": 60578618,
-            "entries": [
-                {
-                    "stream": 0,
-                    "type": "Float3",
-                    "usage": "Position",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "ubyte4n",
-                    "usage": "Color",
-                    "usageIndex": 0
-                }
-            ]
-        },
         "Color": {
             "name": "Color",
+            "sizes": {
+                "0": 16
+            },
             "hash": 1308845671,
             "entries": [
                 {
@@ -170,6 +177,9 @@
         },
         "ColorUV": {
             "name": "ColorUV",
+            "sizes": {
+                "0": 24
+            },
             "hash": 270179060,
             "entries": [
                 {
@@ -194,6 +204,10 @@
         },
         "ClrNrmUV": {
             "name": "ClrNrmUV",
+            "sizes": {
+                "0": 12,
+                "1": 24
+            },
             "hash": 3836099982,
             "entries": [
                 {
@@ -224,6 +238,11 @@
         },
         "BumpUVInstanced": {
             "name": "BumpUVInstanced",
+            "sizes": {
+                "0": 12,
+                "1": 32,
+                "2": 36
+            },
             "hash": 619076972,
             "entries": [
                 {
@@ -284,6 +303,10 @@
         },
         "BumpUVSkin": {
             "name": "BumpUVSkin",
+            "sizes": {
+                "0": 12,
+                "1": 48
+            },
             "hash": 698790931,
             "entries": [
                 {
@@ -326,6 +349,10 @@
         },
         "BumpUVRigid": {
             "name": "BumpUVRigid",
+            "sizes": {
+                "0": 12,
+                "1": 32
+            },
             "hash": 3232527073,
             "entries": [
                 {
@@ -356,6 +383,10 @@
         },
         "BumpRigid": {
             "name": "BumpRigid",
+            "sizes": {
+                "0": 12,
+                "1": 12
+            },
             "hash": 3199095388,
             "entries": [
                 {
@@ -386,6 +417,11 @@
         },
         "BumpRigidInstanced": {
             "name": "BumpRigidInstanced",
+            "sizes": {
+                "0": 12,
+                "1": 12,
+                "2": 48
+            },
             "hash": 3925380540,
             "entries": [
                 {
@@ -432,62 +468,12 @@
                 }
             ]
         },
-        "BumpRigidBlendInstanced": {
-            "name": "BumpRigidBlendInstanced",
-            "hash": 932471592,
-            "entries": [
-                {
-                    "stream": 0,
-                    "type": "Float3",
-                    "usage": "Position",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "ubyte4n",
-                    "usage": "Tangent",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "ubyte4n",
-                    "usage": "Binormal",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "float16_2",
-                    "usage": "Texcoord",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 2,
-                    "type": "Float4",
-                    "usage": "Texcoord",
-                    "usageIndex": 7
-                },
-                {
-                    "stream": 2,
-                    "type": "Float4",
-                    "usage": "Texcoord",
-                    "usageIndex": 8
-                },
-                {
-                    "stream": 2,
-                    "type": "Float4",
-                    "usage": "Texcoord",
-                    "usageIndex": 9
-                },
-                {
-                    "stream": 2,
-                    "type": "Float1",
-                    "usage": "Texcoord",
-                    "usageIndex": 10
-                }
-            ]
-        },
         "Terrain": {
             "name": "Terrain",
+            "sizes": {
+                "0": 12,
+                "1": 20
+            },
             "hash": 1282876617,
             "entries": [
                 {
@@ -530,6 +516,9 @@
         },
         "TerrainLod0": {
             "name": "TerrainLod0",
+            "sizes": {
+                "0": 16
+            },
             "hash": 2837976330,
             "entries": [
                 {
@@ -560,6 +549,9 @@
         },
         "TerrainLod": {
             "name": "TerrainLod",
+            "sizes": {
+                "0": 12
+            },
             "hash": 1148619324,
             "entries": [
                 {
@@ -584,6 +576,9 @@
         },
         "Flora": {
             "name": "Flora",
+            "sizes": {
+                "0": 32
+            },
             "hash": 385024659,
             "entries": [
                 {
@@ -626,6 +621,9 @@
         },
         "FloraModel": {
             "name": "FloraModel",
+            "sizes": {
+                "0": 44
+            },
             "hash": 447445937,
             "entries": [
                 {
@@ -656,6 +654,10 @@
         },
         "FloraModelInstanced": {
             "name": "FloraModelInstanced",
+            "sizes": {
+                "0": 44,
+                "1": 36
+            },
             "hash": 4063283140,
             "entries": [
                 {
@@ -716,6 +718,9 @@
         },
         "Post": {
             "name": "Post",
+            "sizes": {
+                "0": 24
+            },
             "hash": 291187865,
             "entries": [
                 {
@@ -734,6 +739,9 @@
         },
         "DebugText": {
             "name": "DebugText",
+            "sizes": {
+                "0": 20
+            },
             "hash": 689345351,
             "entries": [
                 {
@@ -764,6 +772,9 @@
         },
         "FontPrimitive": {
             "name": "FontPrimitive",
+            "sizes": {
+                "0": 32
+            },
             "hash": 3045120596,
             "entries": [
                 {
@@ -794,6 +805,10 @@
         },
         "Billboard": {
             "name": "Billboard",
+            "sizes": {
+                "0": 12,
+                "1": 28
+            },
             "hash": 3204905593,
             "entries": [
                 {
@@ -803,25 +818,25 @@
                     "usageIndex": 0
                 },
                 {
-                    "stream": 0,
+                    "stream": 1,
                     "type": "Float2",
                     "usage": "Texcoord",
                     "usageIndex": 0
                 },
                 {
-                    "stream": 0,
+                    "stream": 1,
                     "type": "Float2",
                     "usage": "Texcoord",
                     "usageIndex": 1
                 },
                 {
-                    "stream": 0,
+                    "stream": 1,
                     "type": "Float2",
                     "usage": "Texcoord",
                     "usageIndex": 2
                 },
                 {
-                    "stream": 0,
+                    "stream": 1,
                     "type": "D3dcolor",
                     "usage": "Color",
                     "usageIndex": 0
@@ -830,6 +845,9 @@
         },
         "SpriteParticle": {
             "name": "SpriteParticle",
+            "sizes": {
+                "0": 44
+            },
             "hash": 2192373070,
             "entries": [
                 {
@@ -878,6 +896,9 @@
         },
         "BeamParticle": {
             "name": "BeamParticle",
+            "sizes": {
+                "0": 48
+            },
             "hash": 3702316805,
             "entries": [
                 {
@@ -920,6 +941,9 @@
         },
         "StreakParticle": {
             "name": "StreakParticle",
+            "sizes": {
+                "0": 56
+            },
             "hash": 2501507232,
             "entries": [
                 {
@@ -974,6 +998,10 @@
         },
         "SimpleEmissive": {
             "name": "SimpleEmissive",
+            "sizes": {
+                "0": 12,
+                "1": 4
+            },
             "hash": 789846180,
             "entries": [
                 {
@@ -992,6 +1020,10 @@
         },
         "TexProj": {
             "name": "TexProj",
+            "sizes": {
+                "0": 12,
+                "1": 52
+            },
             "hash": 1226211302,
             "entries": [
                 {
@@ -1034,6 +1066,9 @@
         },
         "ProjDecal": {
             "name": "ProjDecal",
+            "sizes": {
+                "0": 92
+            },
             "hash": 355107625,
             "entries": [
                 {
@@ -1094,6 +1129,9 @@
         },
         "NewSatellite": {
             "name": "NewSatellite",
+            "sizes": {
+                "0": 20
+            },
             "hash": 2853583577,
             "entries": [
                 {
@@ -1112,6 +1150,10 @@
         },
         "Designer": {
             "name": "Designer",
+            "sizes": {
+                "0": 12,
+                "1": 4
+            },
             "hash": 323684389,
             "entries": [
                 {
@@ -1130,6 +1172,11 @@
         },
         "DesignerInstanced": {
             "name": "DesignerInstanced",
+            "sizes": {
+                "0": 12,
+                "1": 4,
+                "2": 48
+            },
             "hash": 1399970187,
             "entries": [
                 {
@@ -1166,6 +1213,10 @@
         },
         "Foliage": {
             "name": "Foliage",
+            "sizes": {
+                "0": 12,
+                "1": 16
+            },
             "hash": 4243991796,
             "entries": [
                 {
@@ -1202,6 +1253,11 @@
         },
         "FoliageInstanced": {
             "name": "FoliageInstanced",
+            "sizes": {
+                "0": 12,
+                "1": 16,
+                "2": 48
+            },
             "hash": 2842991922,
             "entries": [
                 {
@@ -1256,6 +1312,10 @@
         },
         "Trunk": {
             "name": "Trunk",
+            "sizes": {
+                "0": 12,
+                "1": 20
+            },
             "hash": 499739814,
             "entries": [
                 {
@@ -1298,6 +1358,11 @@
         },
         "TrunkInstanced": {
             "name": "TrunkInstanced",
+            "sizes": {
+                "0": 12,
+                "1": 20,
+                "2": 48
+            },
             "hash": 1425587058,
             "entries": [
                 {
@@ -1358,6 +1423,10 @@
         },
         "TrunkSmall": {
             "name": "TrunkSmall",
+            "sizes": {
+                "0": 12,
+                "1": 20
+            },
             "hash": 3409142548,
             "entries": [
                 {
@@ -1400,6 +1469,11 @@
         },
         "TrunkSmallInstanced": {
             "name": "TrunkSmallInstanced",
+            "sizes": {
+                "0": 12,
+                "1": 20,
+                "2": 48
+            },
             "hash": 232239128,
             "entries": [
                 {
@@ -1460,6 +1534,10 @@
         },
         "TwoSided": {
             "name": "TwoSided",
+            "sizes": {
+                "0": 12,
+                "1": 16
+            },
             "hash": 4006781478,
             "entries": [
                 {
@@ -1496,6 +1574,11 @@
         },
         "TwoSidedInstanced": {
             "name": "TwoSidedInstanced",
+            "sizes": {
+                "0": 12,
+                "1": 16,
+                "2": 48
+            },
             "hash": 2014831905,
             "entries": [
                 {
@@ -1550,6 +1633,10 @@
         },
         "Structure": {
             "name": "Structure",
+            "sizes": {
+                "0": 12,
+                "1": 20
+            },
             "hash": 2097086972,
             "entries": [
                 {
@@ -1592,6 +1679,10 @@
         },
         "Glow": {
             "name": "Glow",
+            "sizes": {
+                "0": 12,
+                "1": 12
+            },
             "hash": 1849484739,
             "entries": [
                 {
@@ -1622,6 +1713,11 @@
         },
         "StructureInstanced": {
             "name": "StructureInstanced",
+            "sizes": {
+                "0": 12,
+                "1": 20,
+                "2": 48
+            },
             "hash": 4159675937,
             "entries": [
                 {
@@ -1682,6 +1778,10 @@
         },
         "StructureDecal": {
             "name": "StructureDecal",
+            "sizes": {
+                "0": 12,
+                "1": 12
+            },
             "hash": 3291281361,
             "entries": [
                 {
@@ -1712,6 +1812,11 @@
         },
         "StructureDecalInstanced": {
             "name": "StructureDecalInstanced",
+            "sizes": {
+                "0": 12,
+                "1": 12,
+                "2": 48
+            },
             "hash": 1275320262,
             "entries": [
                 {
@@ -1760,6 +1865,10 @@
         },
         "StructureTint": {
             "name": "StructureTint",
+            "sizes": {
+                "0": 12,
+                "1": 16
+            },
             "hash": 2134422815,
             "entries": [
                 {
@@ -1796,6 +1905,10 @@
         },
         "StructureWsOverlay": {
             "name": "StructureWsOverlay",
+            "sizes": {
+                "0": 12,
+                "1": 16
+            },
             "hash": 3153034669,
             "entries": [
                 {
@@ -1832,6 +1945,10 @@
         },
         "Object": {
             "name": "Object",
+            "sizes": {
+                "0": 12,
+                "1": 28
+            },
             "hash": 931422573,
             "entries": [
                 {
@@ -1886,6 +2003,11 @@
         },
         "ObjectInstanced": {
             "name": "ObjectInstanced",
+            "sizes": {
+                "0": 12,
+                "1": 28,
+                "2": 48
+            },
             "hash": 963729260,
             "entries": [
                 {
@@ -1958,6 +2080,10 @@
         },
         "ModelRigid": {
             "name": "ModelRigid",
+            "sizes": {
+                "0": 12,
+                "1": 24
+            },
             "hash": 1372633618,
             "entries": [
                 {
@@ -2006,6 +2132,10 @@
         },
         "ModelSkinned": {
             "name": "ModelSkinned",
+            "sizes": {
+                "0": 20,
+                "1": 24
+            },
             "hash": 1597956743,
             "entries": [
                 {
@@ -2066,6 +2196,10 @@
         },
         "Vehicle": {
             "name": "Vehicle",
+            "sizes": {
+                "0": 12,
+                "1": 24
+            },
             "hash": 4043274417,
             "entries": [
                 {
@@ -2114,6 +2248,10 @@
         },
         "Character": {
             "name": "Character",
+            "sizes": {
+                "0": 20,
+                "1": 20
+            },
             "hash": 1715686685,
             "entries": [
                 {
@@ -2168,6 +2306,10 @@
         },
         "CharacterRigid": {
             "name": "CharacterRigid",
+            "sizes": {
+                "0": 12,
+                "1": 20
+            },
             "hash": 1496370155,
             "entries": [
                 {
@@ -2210,6 +2352,10 @@
         },
         "TankTread": {
             "name": "TankTread",
+            "sizes": {
+                "0": 20,
+                "1": 20
+            },
             "hash": 3770275954,
             "entries": [
                 {
@@ -2264,31 +2410,11 @@
         },
         "ForceField": {
             "name": "ForceField",
+            "sizes": {
+                "0": 12,
+                "1": 8
+            },
             "hash": 3251468866,
-            "entries": [
-                {
-                    "stream": 0,
-                    "type": "Float3",
-                    "usage": "Position",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "ubyte4n",
-                    "usage": "Normal",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "Float16_2",
-                    "usage": "Texcoord",
-                    "usageIndex": 0
-                }
-            ]
-        },
-        "SkyStencilMask": {
-            "name": "SkyStencilMask",
-            "hash": 2781423441,
             "entries": [
                 {
                     "stream": 0,
@@ -2312,6 +2438,9 @@
         },
         "DebugObject": {
             "name": "DebugObject",
+            "sizes": {
+                "0": 12
+            },
             "hash": 2016010716,
             "entries": [
                 {
@@ -2324,6 +2453,10 @@
         },
         "DebugVehicle": {
             "name": "DebugVehicle",
+            "sizes": {
+                "0": 12,
+                "1": 8
+            },
             "hash": 3017051536,
             "entries": [
                 {
@@ -2348,6 +2481,9 @@
         },
         "DebugCharacter": {
             "name": "DebugCharacter",
+            "sizes": {
+                "0": 20
+            },
             "hash": 2940868503,
             "entries": [
                 {
@@ -2372,6 +2508,9 @@
         },
         "ToolPrimitive3D": {
             "name": "ToolPrimitive3D",
+            "sizes": {
+                "0": 56
+            },
             "hash": 1177723231,
             "entries": [
                 {
@@ -2402,6 +2541,9 @@
         },
         "SimpleSpriteParticleEmitter": {
             "name": "SimpleSpriteParticleEmitter",
+            "sizes": {
+                "0": 60
+            },
             "hash": 2890262765,
             "entries": [
                 {
@@ -2450,6 +2592,9 @@
         },
         "SpriteParticleEmitter": {
             "name": "SpriteParticleEmitter",
+            "sizes": {
+                "0": 72
+            },
             "hash": 78744754,
             "entries": [
                 {
@@ -2498,6 +2643,9 @@
         },
         "TrailParticleEmitter": {
             "name": "TrailParticleEmitter",
+            "sizes": {
+                "0": 60
+            },
             "hash": 3629128252,
             "entries": [
                 {
@@ -2541,120 +2689,6 @@
                     "type": "Float1",
                     "usage": "Texcoord",
                     "usageIndex": 3
-                }
-            ]
-        },
-        "StructureColor": {
-            "name": "StructureColor",
-            "hash": 2863726666,
-            "entries": [
-                {
-                    "stream": 0,
-                    "type": "Float3",
-                    "usage": "Position",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 0,
-                    "type": "D3dcolor",
-                    "usage": "Color",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "ubyte4n",
-                    "usage": "Tangent",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "ubyte4n",
-                    "usage": "Binormal",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "Float16_2",
-                    "usage": "Texcoord",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "Float16_2",
-                    "usage": "Texcoord",
-                    "usageIndex": 1
-                },
-                {
-                    "stream": 1,
-                    "type": "Float16_2",
-                    "usage": "Texcoord",
-                    "usageIndex": 2
-                }
-            ]
-        },
-        "StructureColorInstanced": {
-            "name": "StructureColorInstanced",
-            "hash": 446107504,
-            "entries": [
-                {
-                    "stream": 0,
-                    "type": "Float3",
-                    "usage": "Position",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 0,
-                    "type": "D3dcolor",
-                    "usage": "Color",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "ubyte4n",
-                    "usage": "Tangent",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "ubyte4n",
-                    "usage": "Binormal",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "Float16_2",
-                    "usage": "Texcoord",
-                    "usageIndex": 0
-                },
-                {
-                    "stream": 1,
-                    "type": "Float16_2",
-                    "usage": "Texcoord",
-                    "usageIndex": 1
-                },
-                {
-                    "stream": 1,
-                    "type": "Float16_2",
-                    "usage": "Texcoord",
-                    "usageIndex": 2
-                },
-                {
-                    "stream": 2,
-                    "type": "Float4",
-                    "usage": "Texcoord",
-                    "usageIndex": 7
-                },
-                {
-                    "stream": 2,
-                    "type": "Float4",
-                    "usage": "Texcoord",
-                    "usageIndex": 8
-                },
-                {
-                    "stream": 2,
-                    "type": "Float4",
-                    "usage": "Texcoord",
-                    "usageIndex": 9
                 }
             ]
         }
@@ -2867,24 +2901,6 @@
                 },
                 {
                     "class": "IntParameter",
-                    "name": "ColorBlindFilter",
-                    "variable": "ColorBlindFilter",
-                    "default": "0"
-                },
-                {
-                    "class": "FloatParameter",
-                    "name": "ColorBlindFilterAmount",
-                    "variable": "ColorBlindFilterAmount",
-                    "default": "1.0"
-                },
-                {
-                    "class": "FloatParameter",
-                    "name": "ColorBlindFilterStrength",
-                    "variable": "ColorBlindFilterStrength",
-                    "default": "1.0"
-                },
-                {
-                    "class": "IntParameter",
                     "name": "FogEnable",
                     "variable": "FogEnable",
                     "default": "1"
@@ -2894,16 +2910,6 @@
                     "name": "FogShadows",
                     "variable": "FogShadowsEnable",
                     "default": "1"
-                },
-                {
-                    "class": "FloatParameter",
-                    "name": "SkyNear",
-                    "variable": "FogSkyNear"
-                },
-                {
-                    "class": "FloatParameter",
-                    "name": "SkyFar",
-                    "variable": "FogSkyFar"
                 },
                 {
                     "class": "FloatParameter",
@@ -2939,12 +2945,6 @@
                     "class": "IntParameter",
                     "name": "MotionBlur",
                     "variable": "MotionBlurEnable",
-                    "default": "1"
-                },
-                {
-                    "class": "IntParameter",
-                    "name": "UnderwaterGodRaysQuality",
-                    "variable": "UnderwaterGodRaysQuality",
                     "default": "1"
                 },
                 {
@@ -3019,24 +3019,6 @@
                 },
                 {
                     "class": "FloatParameter",
-                    "name": "DistortionLameScale",
-                    "variable": "DistortionLameScale",
-                    "default": "0.5"
-                },
-                {
-                    "class": "IntParameter",
-                    "name": "BloomEnabled",
-                    "variable": "BloomEnabled",
-                    "default": "1"
-                },
-                {
-                    "class": "IntParameter",
-                    "name": "SkyStencilMaskEnabled",
-                    "variable": "SkyStencilMaskEnabled",
-                    "default": "0"
-                },
-                {
-                    "class": "FloatParameter",
                     "name": "NightVisionIntensity",
                     "variable": "NightVisionIntensity",
                     "default": "1"
@@ -3058,36 +3040,6 @@
                     "name": "NightVisionNoise",
                     "variable": "NightVisionNoise",
                     "default": "1"
-                },
-                {
-                    "class": "FloatParameter",
-                    "name": "WaterHeight",
-                    "variable": "WaterHeight",
-                    "default": "-3402823466.f"
-                },
-                {
-                    "class": "FloatParameter",
-                    "name": "UnderwaterGodRaysIntensityFactor",
-                    "variable": "UnderwaterGodRaysIntensityFactor",
-                    "default": "1.0"
-                },
-                {
-                    "class": "IntParameter",
-                    "name": "ShadowsFilterType",
-                    "variable": "ShadowsFilterType",
-                    "default": "0"
-                },
-                {
-                    "class": "FloatParameter",
-                    "name": "GaussianIntensity",
-                    "variable": "GaussianIntensity",
-                    "default": "2.16"
-                },
-                {
-                    "class": "FloatParameter",
-                    "name": "GaussianRadius",
-                    "variable": "GaussianRadius",
-                    "default": "1.0"
                 }
             ]
         },
@@ -3444,18 +3396,6 @@
                 },
                 {
                     "class": "FloatParameter",
-                    "name": "EmissiveCorrectionScale",
-                    "variable": "_EmissiveCorrectionScale",
-                    "default": "1"
-                },
-                {
-                    "class": "FloatParameter",
-                    "name": "EmissiveCorrectionLimit",
-                    "variable": "_EmissiveCorrectionLimit",
-                    "default": "1024"
-                },
-                {
-                    "class": "FloatParameter",
                     "name": "SwayScale",
                     "variable": "SwayScale",
                     "default": "1"
@@ -3495,12 +3435,6 @@
                     "name": "SwayStrength",
                     "variable": "SwayStrength",
                     "default": "0"
-                },
-                {
-                    "class": "IntParameter",
-                    "name": "SkyFogShadowsEnabled",
-                    "variable": "SkyFogShadowsEnabled",
-                    "default": "1"
                 },
                 {
                     "class": "FloatParameter",
@@ -3635,8 +3569,8 @@
                 },
                 {
                     "class": "MatrixParameter",
-                    "name": "CameraViewToSpotLightShadowViewProj",
-                    "variable": "CameraViewToSpotLightShadowViewProj"
+                    "name": "SpotLightShadowViewProj",
+                    "variable": "SpotLightShadowViewProj"
                 },
                 {
                     "class": "TextureParameter",
@@ -3868,30 +3802,6 @@
                 }
             ]
         },
-        "UnderwaterGodRays": {
-            "name": "UnderwaterGodRays",
-            "hash": 2294284584,
-            "parameters": [
-                {
-                    "class": "FloatParameter",
-                    "name": "UnderwaterGodRaysMaxIntensity",
-                    "variable": "UnderwaterGodRaysMaxIntensity",
-                    "default": "2.1"
-                },
-                {
-                    "class": "FloatParameter",
-                    "name": "UnderwaterGodRaysMinIntensity",
-                    "variable": "UnderwaterGodRaysMinIntensity",
-                    "default": "0.4"
-                },
-                {
-                    "class": "FloatParameter",
-                    "name": "UnderwaterGodRaysMovementFactor",
-                    "variable": "UnderwaterGodRaysMovementFactor",
-                    "default": "2.0"
-                }
-            ]
-        },
         "UI": {
             "name": "UI",
             "hash": 3791315979,
@@ -3952,16 +3862,8 @@
                 {
                     "name": "Normal",
                     "effect": "floraModelInstanced.efb",
-                    "technique": "Normal",
                     "inputLayout": "FloraModelInstanced",
                     "hash": 3599348095
-                },
-                {
-                    "name": "DepthPrePass",
-                    "effect": "floraModelInstanced.efb",
-                    "technique": "Depth",
-                    "inputLayout": "FloraModelInstanced",
-                    "hash": 2312940985
                 }
             ]
         },
@@ -4111,62 +4013,6 @@
                     "name": "Normal",
                     "effect": "ambientOcclusionUpsample.efb",
                     "inputLayout": "Post",
-                    "hash": 3599348095
-                }
-            ]
-        },
-        "1775111593": {
-            "name": "UnderwaterGodRaysTrace",
-            "hash": 1775111593,
-            "properties": [],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "UnderwaterGodRays.efb",
-                    "technique": "TechniqueTrace",
-                    "inputLayout": "Position",
-                    "hash": 3599348095
-                }
-            ]
-        },
-        "1330392399": {
-            "name": "UnderwaterGodRaysApply",
-            "hash": 1330392399,
-            "properties": [],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "UnderwaterGodRays.efb",
-                    "technique": "TechniqueApply",
-                    "inputLayout": "Position",
-                    "hash": 3599348095
-                }
-            ]
-        },
-        "1034060247": {
-            "name": "UnderwaterGodRaysSmoothX",
-            "hash": 1034060247,
-            "properties": [],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "UnderwaterGodRays.efb",
-                    "technique": "TechniqueSmoothX",
-                    "inputLayout": "Position",
-                    "hash": 3599348095
-                }
-            ]
-        },
-        "2614902345": {
-            "name": "UnderwaterGodRaysSmoothY",
-            "hash": 2614902345,
-            "properties": [],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "UnderwaterGodRays.efb",
-                    "technique": "TechniqueSmoothY",
-                    "inputLayout": "Position",
                     "hash": 3599348095
                 }
             ]
@@ -4559,25 +4405,6 @@
                 }
             ]
         },
-        "2237868765": {
-            "name": "PrimitivePseudo3DTexture",
-            "hash": 2237868765,
-            "properties": [],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "PrimitivePseudo3DTexture.efb",
-                    "inputLayout": "Billboard",
-                    "hash": 3599348095
-                },
-                {
-                    "name": "Pick",
-                    "effect": "PrimitivePseudo3DTexture.efb",
-                    "inputLayout": "Billboard",
-                    "hash": 2385828166
-                }
-            ]
-        },
         "462851527": {
             "name": "Primitive3DNoZ",
             "hash": 462851527,
@@ -4586,25 +4413,6 @@
                 {
                     "name": "Normal",
                     "effect": "Primitive3DNoZ.efb",
-                    "inputLayout": "Color",
-                    "hash": 3599348095
-                },
-                {
-                    "name": "Pick",
-                    "effect": "Primitive3D.efb",
-                    "inputLayout": "Color",
-                    "hash": 2385828166
-                }
-            ]
-        },
-        "1827124277": {
-            "name": "Primitive3DTransparentDepth",
-            "hash": 1827124277,
-            "properties": [],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "Primitive3DTransparentDepth.efb",
                     "inputLayout": "Color",
                     "hash": 3599348095
                 },
@@ -4642,9 +4450,9 @@
                 }
             ]
         },
-        "1560139171": {
-            "name": "PrimitiveBillboard",
-            "hash": 1560139171,
+        "2237868765": {
+            "name": "PrimitivePseudo3DTexture",
+            "hash": 2237868765,
             "properties": [],
             "drawStyles": [
                 {
@@ -4696,7 +4504,7 @@
                 {
                     "name": "Normal",
                     "effect": "spriteParticle.efb",
-                    "technique": "SpriteParticle",
+                    "technique": "SpriteParticle_RenderLevel2",
                     "inputLayout": "SpriteParticle",
                     "hash": 3599348095
                 }
@@ -4717,7 +4525,7 @@
                 {
                     "name": "Normal",
                     "effect": "spriteParticle.efb",
-                    "technique": "SpriteParticle_FullRes",
+                    "technique": "SpriteParticle_FullRes_RenderLevel2",
                     "inputLayout": "SpriteParticle",
                     "hash": 3599348095
                 }
@@ -4775,13 +4583,6 @@
                     "technique": "BeamParticle_FullRes_RenderLevel2",
                     "inputLayout": "BeamParticle",
                     "hash": 3599348095
-                },
-                {
-                    "name": "Submerged",
-                    "effect": "beamParticle.efb",
-                    "technique": "BeamParticle_FullResInWater_RenderLevel2",
-                    "inputLayout": "BeamParticle",
-                    "hash": 1480570530
                 }
             ]
         },
@@ -4824,13 +4625,6 @@
                     "technique": "StreakParticle",
                     "inputLayout": "StreakParticle",
                     "hash": 3599348095
-                },
-                {
-                    "name": "Submerged",
-                    "effect": "streakParticle.efb",
-                    "technique": "StreakParticleInWater",
-                    "inputLayout": "StreakParticle",
-                    "hash": 1480570530
                 }
             ]
         },
@@ -4901,16 +4695,8 @@
                 {
                     "name": "Normal",
                     "effect": "TerrainLodTile.efb",
-                    "technique": "Normal",
                     "inputLayout": "TerrainLod",
                     "hash": 3599348095
-                },
-                {
-                    "name": "DepthPrePass",
-                    "effect": "TerrainLodTile.efb",
-                    "technique": "Depth",
-                    "inputLayout": "TerrainLod",
-                    "hash": 2312940985
                 },
                 {
                     "name": "CastShadow",
@@ -4931,20 +4717,6 @@
                     "technique": "Normal",
                     "inputLayout": "TerrainLod0",
                     "hash": 3599348095
-                },
-                {
-                    "name": "Refract",
-                    "effect": "Terrain1LayerLod.efb",
-                    "technique": "Refract",
-                    "inputLayout": "TerrainLod0",
-                    "hash": 993000266
-                },
-                {
-                    "name": "DepthPrePass",
-                    "effect": "Terrain1LayerLod.efb",
-                    "technique": "Depth",
-                    "inputLayout": "TerrainLod0",
-                    "hash": 2312940985
                 },
                 {
                     "name": "CastShadow",
@@ -4980,20 +4752,6 @@
                     "hash": 3599348095
                 },
                 {
-                    "name": "Refract",
-                    "effect": "Terrain2LayerLod.efb",
-                    "technique": "Refract",
-                    "inputLayout": "TerrainLod0",
-                    "hash": 993000266
-                },
-                {
-                    "name": "DepthPrePass",
-                    "effect": "Terrain2LayerLod.efb",
-                    "technique": "Depth",
-                    "inputLayout": "TerrainLod0",
-                    "hash": 2312940985
-                },
-                {
                     "name": "CastShadow",
                     "effect": "terrainlod_depth.efb",
                     "inputLayout": "TerrainLod0",
@@ -5025,20 +4783,6 @@
                     "technique": "Normal",
                     "inputLayout": "TerrainLod0",
                     "hash": 3599348095
-                },
-                {
-                    "name": "Refract",
-                    "effect": "Terrain3LayerLod.efb",
-                    "technique": "Refract",
-                    "inputLayout": "TerrainLod0",
-                    "hash": 993000266
-                },
-                {
-                    "name": "DepthPrePass",
-                    "effect": "Terrain3LayerLod.efb",
-                    "technique": "Depth",
-                    "inputLayout": "TerrainLod0",
-                    "hash": 2312940985
                 },
                 {
                     "name": "CastShadow",
@@ -5074,20 +4818,6 @@
                     "hash": 3599348095
                 },
                 {
-                    "name": "Refract",
-                    "effect": "Terrain4LayerLod.efb",
-                    "technique": "Refract",
-                    "inputLayout": "TerrainLod0",
-                    "hash": 993000266
-                },
-                {
-                    "name": "DepthPrePass",
-                    "effect": "Terrain4LayerLod.efb",
-                    "technique": "Depth",
-                    "inputLayout": "TerrainLod0",
-                    "hash": 2312940985
-                },
-                {
                     "name": "CastShadow",
                     "effect": "terrainlod_depth.efb",
                     "inputLayout": "TerrainLod0",
@@ -5119,20 +4849,6 @@
                     "technique": "Normal",
                     "inputLayout": "TerrainLod0",
                     "hash": 3599348095
-                },
-                {
-                    "name": "Refract",
-                    "effect": "Terrain5LayerLod.efb",
-                    "technique": "Refract",
-                    "inputLayout": "TerrainLod0",
-                    "hash": 993000266
-                },
-                {
-                    "name": "DepthPrePass",
-                    "effect": "Terrain5LayerLod.efb",
-                    "technique": "Depth",
-                    "inputLayout": "TerrainLod0",
-                    "hash": 2312940985
                 },
                 {
                     "name": "CastShadow",
@@ -5228,117 +4944,6 @@
                     "effect": "RigidSkinnedLODs.efb",
                     "inputLayout": "DebugVehicle",
                     "hash": 1849484739
-                }
-            ]
-        },
-        "17921649": {
-            "name": "OutlineRigid",
-            "hash": 17921649,
-            "properties": [
-                {
-                    "name": "EffectName",
-                    "variable": "Outline",
-                    "hash": 2935324631
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Outline",
-                    "effect": "OutlineRigid.fxo",
-                    "technique": "Simple_VS3_PS3",
-                    "inputLayout": "Position",
-                    "hash": 455510598
-                }
-            ]
-        },
-        "3058203072": {
-            "name": "OutlinePlayerBase",
-            "hash": 3058203072,
-            "properties": [
-                {
-                    "name": "EffectName",
-                    "variable": "Outline",
-                    "hash": 2935324631
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Outline",
-                    "effect": "OutlineRigid.fxo",
-                    "technique": "PlayerBase",
-                    "inputLayout": "POS_COLOR",
-                    "hash": 455510598
-                }
-            ]
-        },
-        "4065173108": {
-            "name": "OutlineSkinned",
-            "hash": 4065173108,
-            "properties": [
-                {
-                    "name": "EffectName",
-                    "variable": "Outline",
-                    "hash": 2935324631
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Outline",
-                    "effect": "OutlineSkinned.fxo",
-                    "inputLayout": "DebugCharacter",
-                    "hash": 455510598
-                }
-            ]
-        },
-        "2110578185": {
-            "name": "OutlineRigidSkinned",
-            "hash": 2110578185,
-            "properties": [
-                {
-                    "name": "EffectName",
-                    "variable": "Outline",
-                    "hash": 2935324631
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Outline",
-                    "effect": "OutlineRigid.fxo",
-                    "technique": "RigidSkinned",
-                    "inputLayout": "DebugVehicle",
-                    "hash": 455510598
-                }
-            ]
-        },
-        "3560117383": {
-            "name": "OutlineFoliage",
-            "hash": 3560117383,
-            "properties": [
-                {
-                    "name": "EffectName",
-                    "variable": "Outline",
-                    "hash": 2935324631
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Outline",
-                    "effect": "OutlineFoliage.fxo",
-                    "inputLayout": "Foliage",
-                    "hash": 455510598
-                }
-            ]
-        },
-        "3089154459": {
-            "name": "OutlineScreenPasses",
-            "hash": 3089154459,
-            "properties": [],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "OutlineScreenPasses.fxo",
-                    "inputLayout": "Position",
-                    "hash": 3599348095
                 }
             ]
         },
@@ -5543,18 +5148,6 @@
                     "name": "InstancedVersion",
                     "value": "BumpRigidInstanced",
                     "hash": 1732393429
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "StructureShieldEffect",
-                    "value": "BumpRigidShield",
-                    "hash": 1711936320
                 }
             ],
             "drawStyles": [
@@ -5607,12 +5200,6 @@
                     "name": "Visualizer",
                     "value": "RigidLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -5818,135 +5405,14 @@
                     "name": "Glow",
                     "effect": "Bump.efb",
                     "technique": "RigidHologram_Instanced",
-                    "inputLayout": "BumpRigidBlendInstanced",
+                    "inputLayout": "BumpRigidInstanced",
                     "hash": 1849484739
                 },
                 {
                     "name": "Pick",
                     "effect": "PickRigid.efb",
-                    "inputLayout": "BumpRigidBlendInstanced",
+                    "inputLayout": "BumpRigidInstanced",
                     "hash": 2385828166
-                }
-            ]
-        },
-        "3329133080": {
-            "name": "BumpRigidBlend",
-            "hash": 3329133080,
-            "properties": [
-                {
-                    "type": "ValidEffect",
-                    "name": "DeRes",
-                    "value": "BumpRigidDeRes",
-                    "hash": 3727590638
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Stealth",
-                    "value": "CharacterStealth",
-                    "hash": 2446089009
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Shield",
-                    "value": "CharacterShield",
-                    "hash": 62000442
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Visualizer",
-                    "value": "RigidLODs",
-                    "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "InstancedVersion",
-                    "value": "BumpRigidBlendInstanced",
-                    "hash": 1732393429
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "StructureShieldEffect",
-                    "value": "BumpRigidShield",
-                    "hash": 1711936320
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "Bump.efb",
-                    "technique": "RigidBlend",
-                    "inputLayout": "BumpRigid",
-                    "hash": 3599348095
-                },
-                {
-                    "name": "CastShadow",
-                    "effect": "Bump.efb",
-                    "technique": "RigidOpaqueDepth",
-                    "inputLayout": "BumpRigid",
-                    "hash": 2915484205
-                },
-                {
-                    "name": "Pick",
-                    "effect": "PickRigid.efb",
-                    "inputLayout": "BumpRigid",
-                    "hash": 2385828166
-                }
-            ]
-        },
-        "932471592": {
-            "name": "BumpRigidBlendInstanced",
-            "hash": 932471592,
-            "properties": [
-                {
-                    "type": "ValidEffect",
-                    "name": "DeRes",
-                    "value": "BumpRigidDeRes",
-                    "hash": 3727590638
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Stealth",
-                    "value": "CharacterStealth",
-                    "hash": 2446089009
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Shield",
-                    "value": "CharacterShield",
-                    "hash": 62000442
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Visualizer",
-                    "value": "RigidLODs",
-                    "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "Bump.efb",
-                    "technique": "RigidBlend_Instanced",
-                    "inputLayout": "BumpRigidBlendInstanced",
-                    "hash": 3599348095
-                },
-                {
-                    "name": "CastShadow",
-                    "effect": "rigidInstanced_depth.efb",
-                    "inputLayout": "BumpRigidBlendInstanced",
-                    "hash": 2915484205
                 }
             ]
         },
@@ -6016,12 +5482,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -6220,44 +5680,8 @@
                 {
                     "name": "Normal",
                     "effect": "SkyMask.efb",
-                    "technique": "Simple_VS2_PS2",
                     "inputLayout": "Post",
                     "hash": 3599348095
-                }
-            ]
-        },
-        "2781423441": {
-            "name": "SkyStencilMask",
-            "hash": 2781423441,
-            "properties": [
-                {
-                    "type": "ValidEffect",
-                    "name": "Visualizer",
-                    "value": "RigidLODs",
-                    "hash": 2402127528
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "SkyStencilClear",
-                    "effect": "SkyMask.efb",
-                    "technique": "SkyMaskStencilTechClear",
-                    "inputLayout": "SkyStencilMask",
-                    "hash": 2615206228
-                },
-                {
-                    "name": "Normal",
-                    "effect": "SkyMask.efb",
-                    "technique": "SkyMaskStencilTech",
-                    "inputLayout": "SkyStencilMask",
-                    "hash": 3599348095
-                },
-                {
-                    "name": "Distortion",
-                    "effect": "SkyMask.efb",
-                    "technique": "SkyMaskStencilTech",
-                    "inputLayout": "SkyStencilMask",
-                    "hash": 2279761386
                 }
             ]
         },
@@ -6353,16 +5777,8 @@
                 {
                     "name": "Normal",
                     "effect": "FoliageInstanced.efb",
-                    "technique": "Normal",
                     "inputLayout": "FoliageInstanced",
                     "hash": 3599348095
-                },
-                {
-                    "name": "DepthPrePass",
-                    "effect": "FoliageInstanced.efb",
-                    "technique": "Depth",
-                    "inputLayout": "FoliageInstanced",
-                    "hash": 2312940985
                 },
                 {
                     "name": "CastShadow",
@@ -6544,16 +5960,8 @@
                 {
                     "name": "Normal",
                     "effect": "TwoSidedInstanced.efb",
-                    "technique": "Normal",
                     "inputLayout": "TwoSidedInstanced",
                     "hash": 3599348095
-                },
-                {
-                    "name": "DepthPrePass",
-                    "effect": "TwoSidedInstanced.efb",
-                    "technique": "Depth",
-                    "inputLayout": "TwoSidedInstanced",
-                    "hash": 2312940985
                 },
                 {
                     "name": "CastShadow",
@@ -6585,89 +5993,13 @@
                     "name": "InstancedVersion",
                     "value": "StructureInstanced",
                     "hash": 1732393429
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "StructureDeResEffect",
-                    "value": "StructureDeRes",
-                    "hash": 1312999451
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "StructureShieldEffect",
-                    "value": "StructureShield",
-                    "hash": 1711936320
                 }
             ],
             "drawStyles": [
                 {
                     "name": "Normal",
-                    "effect": "Structure.efb",
-                    "technique": "Technique1",
+                    "effect": "structure.efb",
                     "inputLayout": "Structure",
-                    "hash": 3599348095
-                },
-                {
-                    "name": "CastShadow",
-                    "effect": "rigid_depth.efb",
-                    "inputLayout": "Structure",
-                    "hash": 2915484205
-                },
-                {
-                    "name": "Pick",
-                    "effect": "PickRigid.efb",
-                    "inputLayout": "Structure",
-                    "hash": 2385828166
-                }
-            ]
-        },
-        "2863726666": {
-            "name": "StructureColor",
-            "hash": 2863726666,
-            "properties": [
-                {
-                    "type": "ValidEffect",
-                    "name": "Visualizer",
-                    "value": "RigidLODs",
-                    "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "InstancedVersion",
-                    "value": "StructureColorInstanced",
-                    "hash": 1732393429
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "StructureDeResEffect",
-                    "value": "StructureDeRes",
-                    "hash": 1312999451
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "StructureShieldEffect",
-                    "value": "StructureShield",
-                    "hash": 1711936320
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "Structure.efb",
-                    "technique": "StructureColorTech",
-                    "inputLayout": "StructureColor",
                     "hash": 3599348095
                 },
                 {
@@ -6704,8 +6036,7 @@
             "drawStyles": [
                 {
                     "name": "Normal",
-                    "effect": "Structure.efb",
-                    "technique": "Technique1",
+                    "effect": "structure.efb",
                     "inputLayout": "Structure",
                     "hash": 3599348095
                 },
@@ -6718,7 +6049,6 @@
                 {
                     "name": "Pick",
                     "effect": "PickRigid.efb",
-                    "technique": "Technique1",
                     "inputLayout": "Structure",
                     "hash": 2385828166
                 }
@@ -6877,13 +6207,6 @@
                     "hash": 69084213
                 },
                 {
-                    "name": "Submerged",
-                    "effect": "Glow.efb",
-                    "technique": "GlowWith1TextureInWater_Tinted",
-                    "inputLayout": "POS_TEX",
-                    "hash": 1480570530
-                },
-                {
                     "name": "Normal",
                     "effect": "Glow.efb",
                     "technique": "Depth",
@@ -6916,13 +6239,6 @@
                     "technique": "GlowWith2Textures_Tinted",
                     "inputLayout": "POS_TEX2",
                     "hash": 69084213
-                },
-                {
-                    "name": "Submerged",
-                    "effect": "Glow.efb",
-                    "technique": "GlowWith2TexturesInWater_Tinted",
-                    "inputLayout": "POS_TEX2",
-                    "hash": 1480570530
                 },
                 {
                     "name": "Normal",
@@ -7016,53 +6332,13 @@
                     "name": "Visualizer",
                     "value": "RigidLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
                 {
                     "name": "Normal",
                     "effect": "structureInstanced.efb",
-                    "technique": "Technique1",
                     "inputLayout": "StructureInstanced",
-                    "hash": 3599348095
-                },
-                {
-                    "name": "CastShadow",
-                    "effect": "rigidInstanced_depth.efb",
-                    "inputLayout": "StructureInstanced",
-                    "hash": 2915484205
-                }
-            ]
-        },
-        "446107504": {
-            "name": "StructureColorInstanced",
-            "hash": 446107504,
-            "properties": [
-                {
-                    "type": "ValidEffect",
-                    "name": "Visualizer",
-                    "value": "RigidLODs",
-                    "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "structureInstanced.efb",
-                    "technique": "StructureColorInstancedTech",
-                    "inputLayout": "StructureColorInstanced",
                     "hash": 3599348095
                 },
                 {
@@ -7359,82 +6635,6 @@
                     "name": "Stealth",
                     "value": "ObjectStealth",
                     "hash": 2446089009
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "object.efb",
-                    "technique": "Opaque",
-                    "inputLayout": "Object",
-                    "hash": 3599348095
-                },
-                {
-                    "name": "CastShadow",
-                    "effect": "rigid_depth.efb",
-                    "inputLayout": "Object",
-                    "hash": 2915484205
-                },
-                {
-                    "name": "Pick",
-                    "effect": "PickRigid.efb",
-                    "inputLayout": "Object",
-                    "hash": 2385828166
-                }
-            ]
-        },
-        "110312085": {
-            "name": "ObjectDeployNodeView",
-            "hash": 110312085,
-            "properties": [
-                {
-                    "name": "EffectName",
-                    "variable": "Visualizer",
-                    "hash": 2935324631
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Glow",
-                    "effect": "RigidLODs.efb",
-                    "inputLayout": "Position",
-                    "hash": 1849484739
-                }
-            ]
-        },
-        "906471368": {
-            "name": "ObjectDeployNode",
-            "hash": 906471368,
-            "properties": [
-                {
-                    "type": "ValidEffect",
-                    "name": "Visualizer",
-                    "value": "ObjectDeployNodeView",
-                    "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "InstancedVersion",
-                    "value": "ObjectInstanced",
-                    "hash": 1732393429
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Stealth",
-                    "value": "ObjectStealth",
-                    "hash": 2446089009
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -7514,12 +6714,6 @@
                     "name": "Visualizer",
                     "value": "RigidLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -7565,12 +6759,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -7623,12 +6811,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -7681,12 +6863,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -7739,12 +6915,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -7797,12 +6967,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -7855,12 +7019,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -7913,12 +7071,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -7971,12 +7123,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -8029,12 +7175,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -8087,12 +7227,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -8485,20 +7619,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_Rigid_0Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Rigid",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_Rigid",
@@ -8538,20 +7658,6 @@
                     "technique": "CloakColor_Rigid",
                     "inputLayout": "ModelRigid",
                     "hash": 1849484739
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_Rigid_1Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Rigid",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
                 },
                 {
                     "name": "Distortion",
@@ -8609,20 +7715,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_Rigid_2Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Rigid",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_Rigid",
@@ -8669,20 +7761,6 @@
                     "technique": "CloakDistortion_Rigid",
                     "inputLayout": "ModelRigid",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_Rigid_3Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Rigid",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -8733,20 +7811,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_Rigid_4Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Rigid",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_Rigid",
@@ -8793,20 +7857,6 @@
                     "technique": "CloakDistortion_Rigid",
                     "inputLayout": "ModelRigid",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_Rigid_0Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Rigid",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -8857,20 +7907,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_Rigid_1Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Rigid",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_Rigid",
@@ -8917,20 +7953,6 @@
                     "technique": "CloakDistortion_Rigid",
                     "inputLayout": "ModelRigid",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_Rigid_2Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Rigid",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -8981,20 +8003,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_Rigid_3Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Rigid",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_Rigid",
@@ -9041,20 +8049,6 @@
                     "technique": "CloakDistortion_Rigid",
                     "inputLayout": "ModelRigid",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_Rigid_4Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Rigid",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -9138,12 +8132,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -9196,12 +8184,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -9254,12 +8236,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -9312,12 +8288,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -9370,12 +8340,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -9428,12 +8392,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -9486,12 +8444,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -9544,12 +8496,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -9602,12 +8548,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -9660,12 +8600,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -10058,20 +8992,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_RigidSkinned_0Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_RigidSkinned",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_RigidSkinned",
@@ -10118,20 +9038,6 @@
                     "technique": "CloakDistortion_RigidSkinned",
                     "inputLayout": "ModelRigid",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_RigidSkinned_1Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_RigidSkinned",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -10182,20 +9088,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_RigidSkinned_2Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_RigidSkinned",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_RigidSkinned",
@@ -10242,20 +9134,6 @@
                     "technique": "CloakDistortion_RigidSkinned",
                     "inputLayout": "ModelRigid",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_RigidSkinned_3Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_RigidSkinned",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -10306,20 +9184,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_RigidSkinned_4Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_RigidSkinned",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_RigidSkinned",
@@ -10366,20 +9230,6 @@
                     "technique": "CloakDistortion_RigidSkinned",
                     "inputLayout": "ModelRigid",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_RigidSkinned_0Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_RigidSkinned",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -10430,20 +9280,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_RigidSkinned_1Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_RigidSkinned",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_RigidSkinned",
@@ -10490,20 +9326,6 @@
                     "technique": "CloakDistortion_RigidSkinned",
                     "inputLayout": "ModelRigid",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_RigidSkinned_2Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_RigidSkinned",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -10554,20 +9376,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_RigidSkinned_3Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_RigidSkinned",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_RigidSkinned",
@@ -10614,20 +9422,6 @@
                     "technique": "CloakDistortion_RigidSkinned",
                     "inputLayout": "ModelRigid",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_RigidSkinned_4Overlay",
-                    "inputLayout": "ModelRigid",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_RigidSkinned",
-                    "inputLayout": "ModelRigid",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -10711,12 +9505,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -10763,12 +9551,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -10815,12 +9597,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -10867,12 +9643,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -10919,12 +9689,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -10971,12 +9735,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -11023,12 +9781,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -11075,12 +9827,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -11127,12 +9873,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -11179,12 +9919,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -11511,20 +10245,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_Skinned_0Overlay",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Skinned",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_Skinned",
@@ -11565,20 +10285,6 @@
                     "technique": "CloakDistortion_Skinned",
                     "inputLayout": "ModelSkinned",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_Skinned_1Overlay",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Skinned",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -11623,20 +10329,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_Skinned_2Overlay",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Skinned",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_Skinned",
@@ -11677,20 +10369,6 @@
                     "technique": "CloakDistortion_Skinned",
                     "inputLayout": "ModelSkinned",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_Skinned_3Overlay",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Skinned",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -11735,20 +10413,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "Cloak_Skinned_4Overlay",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Skinned",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_Skinned",
@@ -11789,20 +10453,6 @@
                     "technique": "CloakDistortion_Skinned",
                     "inputLayout": "ModelSkinned",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_Skinned_0Overlay",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Skinned",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -11847,20 +10497,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_Skinned_1Overlay",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Skinned",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_Skinned",
@@ -11901,20 +10537,6 @@
                     "technique": "CloakDistortion_Skinned",
                     "inputLayout": "ModelSkinned",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_Skinned_2Overlay",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Skinned",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -11959,20 +10581,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_Skinned_3Overlay",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Skinned",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Model.efb",
                     "technique": "CloakDarkLightColor_Skinned",
@@ -12013,20 +10621,6 @@
                     "technique": "CloakDistortion_Skinned",
                     "inputLayout": "ModelSkinned",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Model.efb",
-                    "technique": "AuraxiumCloak_Skinned_4Overlay",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Model.efb",
-                    "technique": "CloakColorDistortion_Skinned",
-                    "inputLayout": "ModelSkinned",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -12098,12 +10692,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -12156,12 +10744,6 @@
                     "name": "Visualizer",
                     "value": "RigidSkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigidSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -12220,20 +10802,6 @@
                     "hash": 2279761386
                 },
                 {
-                    "name": "Opaque",
-                    "effect": "Vehicle.efb",
-                    "technique": "Cloak",
-                    "inputLayout": "Vehicle",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Vehicle.efb",
-                    "technique": "CloakColorDistortion",
-                    "inputLayout": "Vehicle",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Vehicle.efb",
                     "technique": "CloakDarkLightColor",
@@ -12286,20 +10854,6 @@
                     "technique": "CloakDistortion",
                     "inputLayout": "Vehicle",
                     "hash": 2279761386
-                },
-                {
-                    "name": "Opaque",
-                    "effect": "Vehicle.efb",
-                    "technique": "AuraxiumCloak",
-                    "inputLayout": "Vehicle",
-                    "hash": 2749889618
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Vehicle.efb",
-                    "technique": "CloakColorDistortion",
-                    "inputLayout": "Vehicle",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -12377,46 +10931,6 @@
                 }
             ]
         },
-        "1602275075": {
-            "name": "StructureDeRes",
-            "hash": 1602275075,
-            "properties": [
-                {
-                    "name": "EffectName",
-                    "variable": "DeRes",
-                    "hash": 2935324631
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Normal",
-                    "effect": "Structure.efb",
-                    "technique": "DeRes",
-                    "inputLayout": "Structure",
-                    "hash": 3599348095
-                },
-                {
-                    "name": "Glow",
-                    "effect": "Structure.efb",
-                    "technique": "DeResGlow",
-                    "inputLayout": "Structure",
-                    "hash": 1849484739
-                },
-                {
-                    "name": "CastShadow",
-                    "effect": "Structure.efb",
-                    "technique": "DeResDepth",
-                    "inputLayout": "Structure",
-                    "hash": 2915484205
-                },
-                {
-                    "name": "Pick",
-                    "effect": "PickRigid.efb",
-                    "inputLayout": "Structure",
-                    "hash": 2385828166
-                }
-            ]
-        },
         "681315347": {
             "name": "AuraxiumVehicleDeRes",
             "hash": 681315347,
@@ -12457,33 +10971,6 @@
                 }
             ]
         },
-        "2384930800": {
-            "name": "BumpRigidShield",
-            "hash": 2384930800,
-            "properties": [
-                {
-                    "name": "EffectName",
-                    "variable": "Shield",
-                    "hash": 2935324631
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Distortion",
-                    "effect": "bump.efb",
-                    "technique": "ShieldDistortion",
-                    "inputLayout": "BumpRigid",
-                    "hash": 2279761386
-                },
-                {
-                    "name": "Glow",
-                    "effect": "bump.efb",
-                    "technique": "ShieldColor",
-                    "inputLayout": "BumpRigid",
-                    "hash": 1849484739
-                }
-            ]
-        },
         "2555864674": {
             "name": "VehicleShield",
             "hash": 2555864674,
@@ -12517,39 +11004,6 @@
                 }
             ]
         },
-        "1758786461": {
-            "name": "StructureShield",
-            "hash": 1758786461,
-            "properties": [
-                {
-                    "name": "EffectName",
-                    "variable": "Shield",
-                    "hash": 2935324631
-                }
-            ],
-            "drawStyles": [
-                {
-                    "name": "Distortion",
-                    "effect": "Structure.efb",
-                    "technique": "ShieldDistortion",
-                    "inputLayout": "Structure",
-                    "hash": 2279761386
-                },
-                {
-                    "name": "Glow",
-                    "effect": "Structure.efb",
-                    "technique": "ShieldColor",
-                    "inputLayout": "Structure",
-                    "hash": 1849484739
-                },
-                {
-                    "name": "Pick",
-                    "effect": "PickRigid.efb",
-                    "inputLayout": "Structure",
-                    "hash": 2385828166
-                }
-            ]
-        },
         "570440238": {
             "name": "VehicleRigid",
             "hash": 570440238,
@@ -12577,12 +11031,6 @@
                     "name": "Visualizer",
                     "value": "RigidLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -12635,12 +11083,6 @@
                     "name": "Visualizer",
                     "value": "RigidLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -12929,12 +11371,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -12981,12 +11417,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -13033,12 +11463,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -13085,12 +11509,6 @@
                     "name": "Visualizer",
                     "value": "RigidLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -13143,12 +11561,6 @@
                     "name": "Visualizer",
                     "value": "RigidLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -13201,12 +11613,6 @@
                     "name": "Visualizer",
                     "value": "RigidLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineRigid",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -13571,12 +11977,6 @@
                     "name": "Visualizer",
                     "value": "SkinnedLODs",
                     "hash": 2402127528
-                },
-                {
-                    "type": "ValidEffect",
-                    "name": "Outline",
-                    "value": "OutlineSkinned",
-                    "hash": 455510598
                 }
             ],
             "drawStyles": [
@@ -13732,17 +12132,9 @@
             "drawStyles": [
                 {
                     "name": "Normal",
-                    "effect": "water.efb",
-                    "technique": "Waters",
+                    "effect": "water.fxo",
                     "inputLayout": "ClrNrmUV",
                     "hash": 3599348095
-                },
-                {
-                    "name": "Refract",
-                    "effect": "water.efb",
-                    "technique": "WaterDepthOnly",
-                    "inputLayout": "ClrNrmUV",
-                    "hash": 993000266
                 },
                 {
                     "name": "FillDepth",
@@ -13799,12 +12191,6 @@
                     "effect": "StreamWater.fxo",
                     "inputLayout": "Object",
                     "hash": 2108565301
-                },
-                {
-                    "name": "Pick",
-                    "effect": "PickStreamWater.fxo",
-                    "inputLayout": "Object",
-                    "hash": 2385828166
                 }
             ]
         },
@@ -14147,13 +12533,6 @@
                     "hash": 1849484739
                 },
                 {
-                    "name": "GlowDistortion",
-                    "effect": "Character.efb",
-                    "technique": "CloakColorDistortion",
-                    "inputLayout": "Character",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Character.efb",
                     "technique": "CloakDarkLightColor",
@@ -14255,13 +12634,6 @@
                     "hash": 1849484739
                 },
                 {
-                    "name": "GlowDistortion",
-                    "effect": "Character.efb",
-                    "technique": "RigidCloakColorDistortion",
-                    "inputLayout": "CharacterRigid",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Character.efb",
                     "technique": "RigidCloakDarkLightColor",
@@ -14323,13 +12695,6 @@
                     "hash": 1849484739
                 },
                 {
-                    "name": "GlowDistortion",
-                    "effect": "Character.efb",
-                    "technique": "CloakColorDistortion",
-                    "inputLayout": "Character",
-                    "hash": 1898122799
-                },
-                {
                     "name": "DistortionLight",
                     "effect": "Character.efb",
                     "technique": "CloakDarkLightColor",
@@ -14389,13 +12754,6 @@
                     "technique": "RigidCloakColor",
                     "inputLayout": "CharacterRigid",
                     "hash": 1849484739
-                },
-                {
-                    "name": "GlowDistortion",
-                    "effect": "Character.efb",
-                    "technique": "RigidCloakColorDistortion",
-                    "inputLayout": "CharacterRigid",
-                    "hash": 1898122799
                 },
                 {
                     "name": "DistortionLight",
@@ -14959,7 +13317,6 @@
                 {
                     "name": "Normal",
                     "effect": "SimpleSpriteParticleEmitter.efb",
-                    "technique": "SimpleSpriteParticle",
                     "inputLayout": "SimpleSpriteParticleEmitter",
                     "hash": 3599348095
                 }
@@ -14973,7 +13330,6 @@
                 {
                     "name": "Normal",
                     "effect": "SimpleSpriteParticleEmitter.efb",
-                    "technique": "SimpleSpriteParticle",
                     "inputLayout": "SimpleSpriteParticleEmitter",
                     "hash": 3599348095
                 }
@@ -14987,16 +13343,8 @@
                 {
                     "name": "Normal",
                     "effect": "SimpleSpriteParticleEmitter.efb",
-                    "technique": "SimpleSpriteParticle",
                     "inputLayout": "SimpleSpriteParticleEmitter",
                     "hash": 3599348095
-                },
-                {
-                    "name": "Submerged",
-                    "effect": "SimpleSpriteParticleEmitter.efb",
-                    "technique": "SimpleSpriteParticleInWater",
-                    "inputLayout": "SimpleSpriteParticleEmitter",
-                    "hash": 1480570530
                 }
             ]
         },
@@ -15078,13 +13426,6 @@
                     "inputLayout": "SpriteParticleEmitter",
                     "technique": "SpriteParticleFullRes",
                     "hash": 3599348095
-                },
-                {
-                    "name": "Submerged",
-                    "effect": "SpriteParticleEmitter.efb",
-                    "inputLayout": "SpriteParticleEmitter",
-                    "technique": "SpriteParticleFullResInWater",
-                    "hash": 1480570530
                 }
             ]
         },
@@ -15166,13 +13507,6 @@
                     "inputLayout": "TrailParticleEmitter",
                     "technique": "TrailParticleFullRes",
                     "hash": 3599348095
-                },
-                {
-                    "name": "Submerged",
-                    "effect": "TrailParticleEmitter.efb",
-                    "inputLayout": "TrailParticleEmitter",
-                    "technique": "TrailParticleFullResInWater",
-                    "hash": 1480570530
                 }
             ]
         },
