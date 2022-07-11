@@ -1,11 +1,16 @@
 import logging
+import multiprocessing
+import multiprocessing.pool
 import os
-import sys
 import numpy
+from PIL import Image as PILImage
 from argparse import ArgumentParser
-from io import FileIO
+from io import BytesIO, FileIO
 from stl import mesh
 from pygltflib import *
+from pathlib import *
+from glob import glob
+from DbgPack import AssetManager
 
 from dme_loader import DME
 
@@ -43,11 +48,12 @@ def to_obj(dme: DME, output: FileIO):
             i0, i1, i2 = mesh.indices[i] + 1, mesh.indices[i+1] + 1, mesh.indices[i+2] + 1
             output.write(f"f {i1}/{i1} {i0}/{i0} {i2}/{i2}\n")
 
-def dme_to_gltk(dme: DME):
+def dme_to_gltf(dme: DME, embed_textures: bool = False) -> Tuple[GLTF2, bytes, Dict[str, PILImage.Image]]:
     gltf = GLTF2()
     blob = b''
     offset = 0
-    for mesh in dme.meshes:
+    for i, mesh in enumerate(dme.meshes):
+        logging.info(f"Writing mesh {i + 1} of {len(dme.meshes)}")
         vertices_bin = numpy.array(mesh.vertices, dtype=numpy.single).flatten().tobytes()
         indices_bin = numpy.array(mesh.indices, dtype=numpy.ushort if mesh.index_size == 2 else numpy.uintc).tobytes()
         normals_bin = numpy.array([[-n for n in normal] for normal in mesh.normals], dtype=numpy.single).flatten().tobytes()
@@ -146,6 +152,25 @@ def dme_to_gltk(dme: DME):
             offset += len(bin)
             blob += bin
         
+        for i, colors in mesh.colors.items():
+            bin = numpy.array(colors, dtype=numpy.single).flatten().tobytes()
+            attributes.append([f"COLOR_{i}", len(gltf.accessors)])
+            gltf.accessors.append(Accessor(
+                bufferView=len(gltf.bufferViews),
+                componentType=FLOAT,
+                count=len(colors),
+                type=VEC4
+            ))
+            gltf.bufferViews.append(BufferView(
+                buffer=0,
+                byteOffset=offset,
+                byteStride=8,
+                byteLength=len(bin),
+                target=ARRAY_BUFFER
+            ))
+            offset += len(bin)
+            blob += bin
+        
         gltf.nodes.append(Node(
             mesh=len(gltf.meshes)
         ))
@@ -161,37 +186,94 @@ def dme_to_gltk(dme: DME):
         byteLength=len(blob)
     ))
 
-    return gltf, blob
+    textures = {}
+    if embed_textures:
+        global pool
+        manager = get_manager(pool)
+        if not manager.loaded.is_set():
+            logging.info("Waiting for assets to load...")
+        manager.loaded.wait()
+        logging.info("Game assets loaded! Dumping textures")
+        for name in set(dme.dmat.textures):
+            texture = manager.get_raw(name)
+            if texture is not None:
+                logging.info(f"Loaded {name}")
+                im = PILImage.open(BytesIO(texture.get_data()))
+                texture.name = str(Path(name).with_suffix(".png"))
+                textures[texture.name] = im
+                gltf.images.append(Image(uri="textures" + os.sep + texture.name))
+            else:
+                logging.warning(f"Could not find {name} in loaded game assets, skipping...")
 
-def to_glb(dme: DME, output: str):
-    gltk, blob = dme_to_gltk(dme)
+    return gltf, blob, textures
+
+def save_textures(output: str, textures: Dict[str, PILImage.Image]):
+    save_directory = Path(output).parent / "textures"
+    save_directory.mkdir(exist_ok=True, parents=True)
+    for texture_name in textures:
+        textures[texture_name].save(save_directory / texture_name, format="png")
+
+def to_glb(dme: DME, output: str, embed_textures: bool = False):
+    gltk, blob, textures = dme_to_gltf(dme, embed_textures)
     gltk.set_binary_blob(blob)
     gltk.save_binary(output)
+    if embed_textures:
+        save_textures(output, textures)
 
-def to_gltf(dme: DME, output: str):
-    gltk, blob = dme_to_gltk(dme)
+
+def to_gltf(dme: DME, output: str, embed_textures: bool = False):
+    gltk, blob, textures = dme_to_gltf(dme, embed_textures)
     blobpath = Path(output).with_suffix(".bin")
     with open(blobpath, "wb") as blob_out:
         blob_out.write(blob)
     gltk.buffers[0].uri = blobpath.name
     gltk.save_json(output)
+    if embed_textures:
+        save_textures(output, textures)
+
+manager: AssetManager = None
+pool: multiprocessing.pool.Pool = None
+
+
+def get_manager(pool) -> AssetManager:
+    global manager
+    if manager is not None:
+        return manager
+    test_server = Path(r"/mnt/e/Users/Public/Daybreak Game Company/Installed Games/PlanetSide 2 Test/Resources/Assets")
+    if not test_server.exists():
+        logging.error(f"Test server installation not found at expected location! Please update path in {__file__} to extract textures automatically!")
+        raise FileNotFoundError(str(test_server))
+    else:
+        logging.info("Loading game assets asynchronously...")
+        manager = AssetManager([Path(p) for p in glob(str(test_server) + "/assets_x64_*.pack2")], p = pool)
+        logging.info(f"Manager created, assets loaded: {manager.loaded.is_set()}")
+    return manager
 
 def main():
+    global pool
     parser = ArgumentParser(description="DME v4 to GLTF/OBJ/STL converter")
-    parser.add_argument("input_file", type=str)
-    parser.add_argument("--output-file", "-o", type=str)
-    parser.add_argument("--format", "-f", choices=["stl", "gltf", "obj", "glb"])
-    parser.add_argument("--material-hashes", "-m", type=int, nargs="+")
-    parser.add_argument("--new-materials", "-n", action="store_true")
-    parser.add_argument("--dump-textures", "-t", action="store_true")
-    parser.add_argument("--verbose", "-v", help="Increase log level", action="count", default=0)
+    parser.add_argument("input_file", type=str, help="Name of the input DME model")
+    parser.add_argument("--output-file", "-o", type=str, help="Where to store the converted file. If not provided, will use the input filename and change the extension")
+    parser.add_argument("--format", "-f", choices=["stl", "gltf", "obj", "glb"], help="The output format to use, required for conversion")
+    parser.add_argument("--material-hashes", "-m", type=int, nargs="+", help="The name hash(es) of the materials to use for each mesh when loading the DME data")
+    parser.add_argument("--new-materials", "-n", action="store_true", help="Use a more recently generated materials.json file. Not super helpful yet since the hash function seems to be changed")
+    parser.add_argument("--dump-textures", "-t", action="store_true", help="Dump the filenames of the textures used by the model to stdout and exit")
+    parser.add_argument("--embed-textures", "-e", action="store_true", help="Embed the texture filenames used by the model in the output file, saving the textures alongside the output (GLTF/GLB only)")
+    parser.add_argument("--verbose", "-v", help="Increase log level, can be specified multiple times", action="count", default=0)
     args = parser.parse_args()
 
     logging.basicConfig(level=max(logging.WARNING - 10 * args.verbose, logging.DEBUG), handlers=[handler])
-
+    pool = multiprocessing.Pool(8)
     try:
+        if args.embed_textures:
+            get_manager(pool)
         with open(args.input_file, "rb") as in_file:
-            dme = DME.load(in_file, args.material_hashes, args.new_materials)
+            dme = DME.load(
+                in_file,
+                material_hashes = args.material_hashes,
+                new_mats        = args.new_materials,
+                textures_only   = args.dump_textures
+            )
         
         if args.dump_textures:
             for texture in dme.dmat.textures:
@@ -213,9 +295,9 @@ def main():
         elif args.format == "stl":
             to_stl(dme, str(tmp_output_path))
         elif args.format == "glb":
-            to_glb(dme, str(tmp_output_path))
+            to_glb(dme, str(tmp_output_path), args.embed_textures)
         elif args.format == "gltf":
-            to_gltf(dme, str(tmp_output_path))
+            to_gltf(dme, str(tmp_output_path), args.embed_textures)
 
         os.replace(tmp_output_path, output_path)
     except FileNotFoundError:
@@ -223,6 +305,8 @@ def main():
     except AssertionError as e:
         logging.error(f"{e}")
     
+    pool.close()
+    pool.join()
 
 
 if __name__ == "__main__":

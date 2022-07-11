@@ -19,24 +19,11 @@ with open(os.path.join(os.path.dirname(__file__), "materials.json")) as f:
 with open(os.path.join(os.path.dirname(__file__), "materials_new.json")) as f:
     materialsNewJson: Dict[str, Dict[str, Dict]] = json.load(f)
 
-InputLayouts = {int(key) : InputLayout.from_json(value) for key, value in materialsJson["inputLayouts"].items()}
+InputLayouts = {int(key) : InputLayout.from_json(value, key) for key, value in materialsJson["inputLayouts"].items()}
 MaterialDefinitions = {int(key) : MaterialDefinition.from_json(value) for key, value in materialsJson["materialDefinitions"].items()}
 
 InputLayoutsNew = {key: InputLayout.from_json(value) for key, value in materialsNewJson["inputLayouts"].items()}
 MaterialDefinitionsNew = {int(key): MaterialDefinition.from_json(value) for key, value in materialsNewJson["materialDefinitions"].items()}
-
-input_layout_formats ={
-    "Float3":       ("<fff", 12),
-    "D3dcolor":     ("<I", 4),
-    "Float2":       ("<ff", 8),
-    "Float4":       ("<ffff", 16),
-    "ubyte4n":      ("<cccc", 4),
-    "Float16_2":    ("<ee", 4),
-    "float16_2":    ("<ee", 4),
-    "Short2":       ("<HH", 4),
-    "Float1":       ("<f", 4),
-    "Short4":       ("<HHHH", 8)
-}
 
 def normalize(vertex: Tuple[float, float, float]):
     length = math.sqrt(vertex[0] ** 2 + vertex[1] ** 2 + vertex[2] ** 2)
@@ -105,13 +92,14 @@ class DrawCall:
         return cls(*struct.unpack("<IIIIIIIII", data.read(36)))
 
 class Mesh:
-    def __init__(self, bytes_per_vertex: List[int], vertex_streams: List[VertexStream], vertices: List[Tuple[float]], normals: List[Tuple[float]], 
-                    binormals: List[Tuple[float]], tangents: List[Tuple[float]], uvs: Dict[int, List[Tuple[float]]], 
+    def __init__(self, bytes_per_vertex: List[int], vertex_streams: List[VertexStream], vertices: List[Tuple[float]], colors: Dict[int, List[Tuple]],
+                    normals: List[Tuple[float]], binormals: List[Tuple[float]], tangents: List[Tuple[float]], uvs: Dict[int, List[Tuple[float]]], 
                     skin_weights: List[Tuple[float]], skin_indices: List[Tuple[int]], index_size: int, 
                     indices: List[int], draw_offset: int, draw_count: int, bone_count: int, draw_calls: List[DrawCall], bone_map_entries: Dict[int, int], bones: List[Bone]):
         self.vertex_size = bytes_per_vertex
         self.vertex_streams = vertex_streams
         self.vertices = vertices
+        self.colors = colors
         self.normals = normals
         self.binormals = binormals
         self.tangents = tangents
@@ -156,7 +144,7 @@ class Mesh:
         )
     
     @classmethod
-    def load(cls, data: BytesIO, input_layout: InputLayout) -> 'Mesh':
+    def load(cls, data: BytesIO, input_layout: Optional[InputLayout]) -> 'Mesh':
         logger.info("Loading mesh data")
         draw_offset, draw_count, bone_count, unknown = struct.unpack("<IIII", data.read(16))
         assert unknown == 0xFFFFFFFF, "{:x}".format(unknown)
@@ -164,6 +152,7 @@ class Mesh:
         
         bpv_list = []
         vertices = []
+        colors: Dict[int, List[Tuple]] = {}
         uvs: Dict[int, List[Tuple]] = {}
         normals = []
         binormals = []
@@ -176,36 +165,68 @@ class Mesh:
             bpv_list.append(bytes_per_vertex)
             vertex_streams.append(VertexStream(bytes_per_vertex, data.read(bytes_per_vertex * vertex_count)))
         
-        logger.info(f"Loaded {vert_stream_count} vertex streams")
+        logger.info(f"Loaded {vert_stream_count} vertex streams - lengths {', '.join(map(str, map(len, vertex_streams)))}")
         logger.info(f"Byte strides: {', '.join(map(str, bpv_list))}")
-
-        for _ in range(vertex_count):
-            for entry in input_layout.entries:
-                stream = vertex_streams[entry.stream]
-                format, size = input_layout_formats[entry.type]
-                value = struct.unpack(format, stream.data.read(size))
-                if entry.type == "ubyte4n":
-                    value = [(val[0] / 255 * 2) - 1 for val in value]
-                elif entry.type == "Float1" or entry.type == "D3dcolor":
-                    value = value[0]
-
-                if entry.usage == LayoutUsage.POSITION:
-                    vertices.append(value)
-                elif entry.usage == LayoutUsage.NORMAL:
-                    normals.append(value)
-                elif entry.usage == LayoutUsage.BINORMAL:
-                    binormals.append(value)
-                elif entry.usage == LayoutUsage.TANGENT:
-                    tangents.append(value)
-                elif entry.usage == LayoutUsage.BLENDWEIGHT:
-                    skin_weights.append(value)
-                elif entry.usage == LayoutUsage.BLENDINDICES:
-                    skin_indices.append(value)
-                elif entry.usage == LayoutUsage.TEXCOORD:
-                    if entry.usage_index not in uvs:
-                        uvs[entry.usage_index] = []
-                    uvs[entry.usage_index].append(value)                    
         
+        if not input_layout or (input_layout.sizes is not None and not all([input_layout.sizes[i] == bpv_list[i] for i in range(len(bpv_list))])):
+            logger.warning("Input layout not provided or has incorrect strides, guessing based on byte strides...")
+            options: List[Tuple[str, InputLayout]] = []
+            for name, layout in InputLayoutsNew.items():
+                if len(bpv_list) != len(layout.sizes):
+                    continue
+                if all([size == layout.sizes[i] for i, size in enumerate(bpv_list)]):
+                    options.append((name, layout))
+            logger.warning(f"Strides: {', '.join(map(str, bpv_list))}")
+            logger.warning("Available matching layouts:")
+            for i, (name, layout) in enumerate(options):
+                logger.warning(f"  {i+1}. {name} [{hash(layout)}] - {', '.join(map(str, layout.sizes))}")
+            resp = ""
+            while not resp.isnumeric() or (int(resp) - 1 < 0 or int(resp) > len(options)):
+                resp = input("Enter the number of the material to use: ")
+            input_layout = options[int(resp) - 1][1]
+            logger.warning(f"Using material '{options[int(resp) - 1][0]}'...")
+
+        logger.info(f"Loading {vertex_count} vertices...")
+        logger.debug(f"Entries - {input_layout.entries}")
+        try:
+            for i in range(vertex_count):
+                for entry in input_layout.entries:
+                    stream = vertex_streams[entry.stream]
+                    format, size = input_layout_formats[entry.type]
+                    #logger.debug(f"Vertex {i} stream {entry.stream} - {entry.type}")
+                    #logger.debug(f"Stream at position {stream.tell()}")
+                    value = struct.unpack(format, stream.data.read(size))
+                    if entry.type == "ubyte4n":
+                        value = [(val[0] / 255 * 2) - 1 for val in value]
+                    elif entry.type == "Float1":
+                        value = value[0]
+                    elif entry.type == "D3dcolor":
+                        value = [(((value[0] >> i * 8) & 0xFF) / 255 * 2) - 1 for i in range(4)]
+
+                    if entry.usage == LayoutUsage.POSITION:
+                        vertices.append(value)
+                    elif entry.usage == LayoutUsage.NORMAL:
+                        normals.append(value)
+                    elif entry.usage == LayoutUsage.BINORMAL:
+                        binormals.append(value)
+                    elif entry.usage == LayoutUsage.TANGENT:
+                        tangents.append(value)
+                    elif entry.usage == LayoutUsage.BLENDWEIGHT:
+                        skin_weights.append(value)
+                    elif entry.usage == LayoutUsage.BLENDINDICES:
+                        skin_indices.append(value)
+                    elif entry.usage == LayoutUsage.TEXCOORD:
+                        if entry.usage_index not in uvs:
+                            uvs[entry.usage_index] = []
+                        uvs[entry.usage_index].append(value)
+                    elif entry.usage == LayoutUsage.COLOR:
+                        if entry.usage_index not in colors:
+                            colors[entry.usage_index] = []
+                        colors[entry.usage_index].append(value)
+        except struct.error as e:
+            logger.error(f"Failed to read data at vertex {i}, format {entry.type}, stream {entry.stream}, stream position {vertex_streams[entry.stream].tell()}")
+            raise e
+
         if len(normals) == 0 and len(binormals) > 0 and len(tangents) > 0:
             for binormal, tangent in zip(binormals, tangents):
                 b = normalize(binormal)
@@ -233,7 +254,7 @@ class Mesh:
         for index_tuple in struct.iter_unpack(index_format, index_data):
             indices.append(index_tuple[0])
         
-        return cls(bpv_list, vertex_streams, vertices, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count, [], {}, [])
+        return cls(bpv_list, vertex_streams, vertices, colors, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count, [], {}, [])
         draw_call_count = struct.unpack("<I", data.read(4))[0]
         logger.warning(f"Loading {draw_call_count} draw calls")
         logger.warning(f"\t draw count: {draw_count}")
@@ -473,7 +494,7 @@ class DME:
         self.meshes = meshes
 
     @classmethod
-    def load(cls, data: BytesIO, material_hashes: Optional[List[int]] = None, new_mats: bool = False) -> 'DME':
+    def load(cls, data: BytesIO, material_hashes: Optional[List[int]] = None, new_mats: bool = False, textures_only: bool = False) -> 'DME':
         logger.info("Loading DME file")
         #DMOD block
         magic = data.read(4)
@@ -489,8 +510,14 @@ class DME:
         minx, miny, minz = struct.unpack("<fff", data.read(12))
         maxx, maxy, maxz = struct.unpack("<fff", data.read(12))
         num_meshes = struct.unpack("<I", data.read(4))[0]
+        logger.info(f"{num_meshes} meshes to load...")
         aabb = AABB([(minx, maxx), (miny, maxy), (minz, maxz)])
         meshes = []
+        if textures_only:
+            logger.info("Skipping mesh loading due to texture only request")
+            meshes = [None] * num_meshes
+            return cls(magic.decode("utf-8"), version, dmat, aabb, meshes)
+        
         for i in range(num_meshes):
             logger.info(f"Loading Mesh {i}")
             material_hash = None
