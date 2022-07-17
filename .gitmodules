@@ -1,0 +1,6 @@
+[submodule "cnk_loader/lzham/lzham_codec"]
+	path = cnk_loader/lzham/lzham_codec
+	url = https://github.com/richgel999/lzham_codec
+[submodule "cnk_loader/lzham/lzham_alpha8"]
+	path = cnk_loader/lzham/lzham_alpha8
+	url = https://github.com/psemu/cnkdec

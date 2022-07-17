@@ -5,5 +5,10 @@ models
 *.obj
 *.gltf
 *.glb
+*.exe*
+*.cnk*
+*.c
 dbg-pack*
 venv
+build
+.vscode
