@@ -1,6 +1,6 @@
+import struct
 from dataclasses import dataclass
 from io import BytesIO
-import struct
 from typing import List
 
 @dataclass
