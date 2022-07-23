@@ -13,17 +13,11 @@ from .data_classes import *
 
 logger = logging.getLogger("dme_loader")
 
-with open(os.path.join(os.path.dirname(__file__), "materials.json")) as f:
+with open(os.path.join(os.path.dirname(__file__), "materials_new.json")) as f:
     materialsJson: Dict[str, Dict[str, Dict]] = json.load(f)
 
-with open(os.path.join(os.path.dirname(__file__), "materials_new.json")) as f:
-    materialsNewJson: Dict[str, Dict[str, Dict]] = json.load(f)
-
-InputLayouts = {int(key) : InputLayout.from_json(value, key) for key, value in materialsJson["inputLayouts"].items()}
-MaterialDefinitions = {int(key) : MaterialDefinition.from_json(value) for key, value in materialsJson["materialDefinitions"].items()}
-
-InputLayoutsNew = {key: InputLayout.from_json(value) for key, value in materialsNewJson["inputLayouts"].items()}
-MaterialDefinitionsNew = {int(key): MaterialDefinition.from_json(value) for key, value in materialsNewJson["materialDefinitions"].items()}
+InputLayouts = {key: InputLayout.from_json(value) for key, value in materialsJson["inputLayouts"].items()}
+MaterialDefinitions = {int(key): MaterialDefinition.from_json(value) for key, value in materialsJson["materialDefinitions"].items()}
 
 def normalize(vertex: Tuple[float, float, float]):
     length = math.sqrt(vertex[0] ** 2 + vertex[1] ** 2 + vertex[2] ** 2)
@@ -171,7 +165,7 @@ class Mesh:
         if not input_layout or (input_layout.sizes is not None and not all([input_layout.sizes[i] == bpv_list[i] for i in range(len(bpv_list))])):
             logger.warning("Input layout not provided or has incorrect strides, guessing based on byte strides...")
             options: List[Tuple[str, InputLayout]] = []
-            for name, layout in InputLayoutsNew.items():
+            for name, layout in InputLayouts.items():
                 if len(bpv_list) != len(layout.sizes):
                     continue
                 if all([size == layout.sizes[i] for i, size in enumerate(bpv_list)]):
@@ -232,9 +226,9 @@ class Mesh:
                 b = normalize(binormal)
                 t = normalize(tangent)
                 if len(tangent) == 4:
-                    sign = -tangent[3]
+                    sign = tangent[3]
                 else:
-                    sign = 1
+                    sign = -1
                 n = normalize((
                     b[1] * t[2] - b[2] * t[1],
                     b[2] * t[0] - b[0] * t[2],
@@ -253,6 +247,11 @@ class Mesh:
         
         for index_tuple in struct.iter_unpack(index_format, index_data):
             indices.append(index_tuple[0])
+        
+        temp_indices = []
+        for i in range(0, len(indices), 3):
+            temp_indices.extend(indices[i:i+3][::-1])
+        indices = temp_indices
         
         return cls(bpv_list, vertex_streams, vertices, colors, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count, [], {}, [])
         draw_call_count = struct.unpack("<I", data.read(4))[0]
@@ -379,29 +378,22 @@ class Material:
             self.__encoded_parameters = b''.join([param.serialize() for param in self.parameters])
         return self.__encoded_parameters
     
-    def input_layout(self, material_hash: Optional[int] = None, new_mats: bool = False) -> InputLayout:
+    def input_layout(self, material_hash: Optional[int] = None) -> InputLayout:
         input_layout = None
         try:
-            usedhash = self.namehash if material_hash is None else material_hash
-            if not new_mats:
-                definition = MaterialDefinitions[usedhash]
-            else:
-                definition = MaterialDefinitionsNew[usedhash]
+            usedhash = self.definition if material_hash is None else material_hash
+            definition = MaterialDefinitions[usedhash]
             logger.info(f"Material definition '{definition.name}' found (name hash {usedhash})")
         except KeyError:
-            logger.warning(f"Material definition not found for name hash {usedhash}! Defaulting to 'VehicleRigid_PS'")
-            definition = MaterialDefinitions[59309762] #"VehicleRigid_PS"
+            logger.warning(f"Material definition not found for definition hash {usedhash}! Defaulting to 'VehicleRigid'")
+            definition = MaterialDefinitions[570440238] #"VehicleRigid"
             draw_style = definition.draw_styles[0]
-            input_layout = InputLayouts[2340912194] #"Vehicle"
+            input_layout = InputLayouts[definition.draw_styles[0].input_layout] #"Vehicle"
         
         if not input_layout:
             try:
                 draw_style = definition.draw_styles[0]
-                if not new_mats:
-                    layout_hash = jenkins.oaat(draw_style.input_layout.encode("utf-8"))
-                    input_layout = InputLayouts[layout_hash]
-                else:
-                    input_layout = InputLayoutsNew[draw_style.input_layout]
+                input_layout = InputLayouts[draw_style.input_layout]
                 logger.info(f"Input Layout '{input_layout.name}' found (name hash {jenkins.oaat(draw_style.input_layout.encode('utf-8'))})")
             except KeyError:
                 logger.warning(f"Input Layout not found for name hash {jenkins.oaat(draw_style.input_layout.encode('utf-8'))}! Defaulting to 'Vehicle'")
@@ -466,7 +458,7 @@ class DMAT:
         assert version == 1, f"Unknown DMAT version {version}"
         
         name_data = data.read(filename_length)
-        texture_names = name_data.decode("utf-8").strip('\x00').split("\x00")
+        texture_names = [name for name in name_data.decode("utf-8").strip('\x00').split("\x00") if name != '']
         logger.info("Textures:\n\t" + '\n\t'.join(texture_names))
         offset += filename_length
 
@@ -494,7 +486,7 @@ class DME:
         self.meshes = meshes
 
     @classmethod
-    def load(cls, data: BytesIO, material_hashes: Optional[List[int]] = None, new_mats: bool = False, textures_only: bool = False) -> 'DME':
+    def load(cls, data: BytesIO, material_hashes: Optional[List[int]] = None, textures_only: bool = False) -> 'DME':
         logger.info("Loading DME file")
         #DMOD block
         magic = data.read(4)
@@ -523,7 +515,7 @@ class DME:
             material_hash = None
             if material_hashes and i < len(material_hashes):
                 material_hash = material_hashes[i]
-            meshes.append(Mesh.load(data, dmat.materials[i].input_layout(material_hash, new_mats)))
+            meshes.append(Mesh.load(data, dmat.materials[i].input_layout(material_hash)))
             logger.info(f"Mesh {i} loaded")
         
         logger.info("DME file loaded")

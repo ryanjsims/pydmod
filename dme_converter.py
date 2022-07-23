@@ -187,7 +187,7 @@ def dme_to_gltf(dme: DME, embed_textures: bool = False) -> Tuple[GLTF2, bytes, D
     ))
 
     textures = {}
-    if embed_textures:
+    if embed_textures and len(dme.dmat.textures) > 0:
         global pool
         manager = get_manager(pool)
         if not manager.loaded.is_set():
@@ -256,7 +256,6 @@ def main():
     parser.add_argument("--output-file", "-o", type=str, help="Where to store the converted file. If not provided, will use the input filename and change the extension")
     parser.add_argument("--format", "-f", choices=["stl", "gltf", "obj", "glb"], help="The output format to use, required for conversion")
     parser.add_argument("--material-hashes", "-m", type=int, nargs="+", help="The name hash(es) of the materials to use for each mesh when loading the DME data")
-    parser.add_argument("--new-materials", "-n", action="store_true", help="Use a more recently generated materials.json file. Not super helpful yet since the hash function seems to be changed")
     parser.add_argument("--dump-textures", "-t", action="store_true", help="Dump the filenames of the textures used by the model to stdout and exit")
     parser.add_argument("--embed-textures", "-e", action="store_true", help="Embed the texture filenames used by the model in the output file, saving the textures alongside the output (GLTF/GLB only)")
     parser.add_argument("--verbose", "-v", help="Increase log level, can be specified multiple times", action="count", default=0)
@@ -271,7 +270,6 @@ def main():
             dme = DME.load(
                 in_file,
                 material_hashes = args.material_hashes,
-                new_mats        = args.new_materials,
                 textures_only   = args.dump_textures
             )
         

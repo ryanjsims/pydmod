@@ -1,22 +1,23 @@
 from typing import Tuple
+from numpy import int32, uint32, int8
+import warnings
 
 
+# Note: Forgelight uses a signed 32 bit int while performing the Jenkins hash, but represents it as unsigned
 def oaat(key: bytes):
-    i = 0
-    hash = 0
-    while i < len(key):
-        hash += key[i]
-        i += 1
-        hash &= 0xFFFFFFFF
-        hash += hash << 10
-        hash &= 0xFFFFFFFF
-        hash ^= hash >> 6
-    hash += hash << 3
-    hash &= 0xFFFFFFFF
-    hash ^= hash >> 11
-    hash += hash << 15
-    hash &= 0xFFFFFFFF
-    return hash
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "overflow encountered in int_scalars", RuntimeWarning)
+        i = 0
+        hash = int32(0)
+        while i < len(key):
+            hash += int8(key[i])
+            i += 1
+            hash += int32(hash << 10)
+            hash ^= int32(hash >> 6)
+        hash += int32(hash << 3)
+        hash ^= int32(hash >> 11)
+        hash += int32(hash << 15)
+        return int(uint32(hash))
 
 def mix(a: int, b: int, c: int) -> Tuple[int, int, int]:
     a &= 0xFFFFFFFF
