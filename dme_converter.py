@@ -19,7 +19,7 @@ logger = logging.getLogger("DME Converter")
 
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(
-    fmt="[%(asctime)s.%(msecs)03d - %(levelname)s] %(message)s",
+    fmt="[%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 ))
 
