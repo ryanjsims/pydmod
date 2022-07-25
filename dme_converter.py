@@ -15,6 +15,8 @@ from DbgPack import AssetManager
 from dme_loader import DME
 from gltf_helpers import *
 
+logger = logging.getLogger("DME Converter")
+
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(
     fmt="[%(asctime)s.%(msecs)03d - %(levelname)s] %(message)s",
@@ -102,12 +104,12 @@ def get_manager(pool: multiprocessing.pool.Pool) -> AssetManager:
         return manager
     test_server = Path(r"/mnt/e/Users/Public/Daybreak Game Company/Installed Games/PlanetSide 2 Test/Resources/Assets")
     if not test_server.exists():
-        logging.error(f"Test server installation not found at expected location! Please update path in {__file__} to extract textures automatically!")
+        logger.error(f"Test server installation not found at expected location! Please update path in {__file__} to extract textures automatically!")
         raise FileNotFoundError(str(test_server))
     else:
-        logging.info("Loading game assets asynchronously...")
+        logger.info("Loading game assets asynchronously...")
         manager = AssetManager([Path(p) for p in glob(str(test_server) + "/assets_x64_*.pack2")], p = pool)
-        logging.info(f"Manager created, assets loaded: {manager.loaded.is_set()}")
+        logger.info(f"Manager created, assets loaded: {manager.loaded.is_set()}")
     return manager
 
 def main():
@@ -139,7 +141,7 @@ def main():
             return 0
         
         if not args.format:
-            logging.error("File format is required for conversion!")
+            logger.error("File format is required for conversion!")
             return 1
         if not args.output_file:
             output_path = Path(args.input_file).with_suffix("." + args.format)
@@ -159,9 +161,9 @@ def main():
 
         os.replace(tmp_output_path, output_path)
     except FileNotFoundError:
-        logging.error(f"Could not find {args.input_file}")
+        logger.error(f"Could not find {args.input_file}")
     except AssertionError as e:
-        logging.error(f"{e}")
+        logger.error(f"{e}")
     
     pool.close()
     pool.join()

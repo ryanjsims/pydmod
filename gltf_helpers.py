@@ -9,6 +9,8 @@ from io import BytesIO
 from PIL import Image as PILImage, ImageChops
 from pygltflib import *
 
+logger = logging.getLogger("GLTF Helpers")
+
 TEXTURE_PER_MATERIAL = 4
 EMISSIVE_STRENGTH = 50
 
@@ -46,15 +48,15 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
 
     
     for i, mesh in enumerate(dme.meshes):
-        logging.info(f"Writing mesh {i + 1} of {len(dme.meshes)}")
+        logger.info(f"Writing mesh {i + 1} of {len(dme.meshes)}")
         offset, blob = add_mesh_to_gltf(gltf, dme, mesh, mats, offset, blob)
     
 
     if len(dme.dmat.textures) > 0:
         if not manager.loaded.is_set():
-            logging.info("Waiting for assets to load...")
+            logger.info("Waiting for assets to load...")
         manager.loaded.wait()
-        logging.info("Game assets loaded! Dumping textures")
+        logger.info("Game assets loaded! Dumping textures")
         CNS_seen = [len(gltf.textures) // 4 - 1, len(gltf.textures) // 4 - 1, len(gltf.textures) // 4 - 1]
         for name in dme.dmat.textures:
             if str(Path(name).with_suffix(".png")) in textures:
@@ -217,9 +219,9 @@ def add_mesh_to_gltf(gltf: GLTF2, dme: DME, mesh: DMEMesh, mats: Dict[int, Mater
 def load_texture(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImage.Image], name: str, CNS_seen: List[int]):
     texture = manager.get_raw(name)
     if texture is None:
-        logging.warning(f"Could not find {name} in loaded game assets, skipping...")
+        logger.warning(f"Could not find {name} in loaded game assets, skipping...")
         return
-    logging.info(f"Loaded {name}")
+    logger.info(f"Loaded {name}")
 
     im = PILImage.open(BytesIO(texture.get_data()))
     if re.match(".*_(s|S).dds", name):
