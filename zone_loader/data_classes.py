@@ -1,7 +1,10 @@
 import struct
+import logging
 from dataclasses import dataclass
 from io import BytesIO
 from typing import List
+
+logger = logging.getLogger("zone_loader")
 
 @dataclass
 class Color:
@@ -186,6 +189,7 @@ class Ecos:
     @classmethod
     def load(cls, data: BytesIO) -> 'Ecos':
         eco_count = struct.unpack("<I", data.read(4))[0]
+        logger.info(f"Loading {eco_count} ecos...")
         ecos = [Eco.load(data) for _ in range(eco_count)]
         return cls(ecos)
     
@@ -233,6 +237,7 @@ class Floras:
     @classmethod
     def load(cls, data: BytesIO, version: int) -> 'Floras':
         flora_count = struct.unpack("<I", data.read(4))[0]
+        logger.info(f"Loading {flora_count} floras...")
         floras = [Flora.load(data, version) for _ in range(flora_count)]
         return cls(floras)
     
@@ -265,6 +270,7 @@ class InvisWalls:
     @classmethod
     def load(cls, data: BytesIO) -> 'InvisWalls':
         count = struct.unpack("<I", data.read(4))[0]
+        logger.info(f"Loading {count} invisible walls...")
         walls = [InvisWall.load(data) for _ in range(count)]
         return cls(walls)
 
@@ -385,6 +391,7 @@ class RuntimeObjects:
     @classmethod
     def load(cls, data: BytesIO, version: int) -> 'RuntimeObjects':
         object_count = struct.unpack("<I", data.read(4))[0]
+        logger.info(f"Loading {object_count} runtime objects...")
         runtime_objects = [RuntimeObject.load(data, version) for _ in range(object_count)]
         return cls(runtime_objects)
 
@@ -453,7 +460,9 @@ class Zone:
 
     @classmethod
     def load(cls, data: BytesIO) -> 'Zone':
+        logger.info("Loading Zone file...")
         header = Header.load(data)
+        logger.info(f"Zone {header}")
         assert data.tell() == header.offsets.ecos
         ecos = Ecos.load(data)
         assert data.tell() == header.offsets.floras
@@ -466,4 +475,5 @@ class Zone:
         lights = Lights.load(data)
         assert data.tell() == header.offsets.unknowns
         unknown_data = data.read()
+        logger.info("Zone file loaded!")
         return cls(header, ecos, floras, invis_walls, objects, lights, unknown_data)
