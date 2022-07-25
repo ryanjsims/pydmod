@@ -35,7 +35,7 @@ def get_base_model(root: ET.Element) -> Optional[str]:
         return None
     return base.get("fileName")
 
-def dme_from_adr(manager: AssetManager, adr_file: FileIO) -> Optional[DME]:
+def dme_from_adr(manager: AssetManager, adr_file: str) -> Optional[DME]:
     root = load_adr(adr_file)
     if root is None:
         return None
