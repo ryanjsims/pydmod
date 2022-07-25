@@ -2,8 +2,9 @@ import logging
 import multiprocessing
 import multiprocessing.pool
 import os
+import re
 import numpy
-from PIL import Image as PILImage
+from PIL import Image as PILImage, ImageChops
 from argparse import ArgumentParser
 from io import BytesIO, FileIO
 from stl import mesh
@@ -12,7 +13,8 @@ from pathlib import *
 from glob import glob
 from DbgPack import AssetManager
 
-from dme_loader import DME
+from dme_loader import DME, Material as FLMaterial
+from dme_loader.dme_loader import MaterialDefinitions
 
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(
@@ -48,10 +50,71 @@ def to_obj(dme: DME, output: FileIO):
             i0, i1, i2 = mesh.indices[i] + 1, mesh.indices[i+1] + 1, mesh.indices[i+2] + 1
             output.write(f"f {i1}/{i1} {i0}/{i0} {i2}/{i2}\n")
 
-def dme_to_gltf(dme: DME, embed_textures: bool = False) -> Tuple[GLTF2, bytes, Dict[str, PILImage.Image]]:
+def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager):
+    pass
+
+def unpack_specular(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage.Image, name: str, CNS_seen: List[int]):
+    metallic = im.getchannel("R")
+    roughness = im.getchannel("A")
+    metallicRoughness = PILImage.merge("RGB", [metallic, roughness, metallic])
+    albedoName = name[:-5] + "C.dds" if name[-5] == "S" else "c.dds"
+    albedo = PILImage.open(BytesIO(manager.get_raw(albedoName).get_data())).convert(mode="RGB")
+    emissive = ImageChops.multiply(im.getchannel("B").convert(mode="RGB"), albedo)
+    mrname = name[:-5] + "MR.png"
+    ename = name[:-5] + "E.png"
+    textures[mrname] = metallicRoughness
+    textures[ename] = emissive
+    gltf.textures[min(CNS_seen) * 4 + 1].name = mrname
+    gltf.textures[min(CNS_seen) * 4 + 1].source = len(gltf.images)
+    gltf.images.append(Image(uri="textures" + os.sep + mrname))
+    gltf.textures[min(CNS_seen) * 4 + 3].name = ename
+    gltf.textures[min(CNS_seen) * 4 + 3].source = len(gltf.images)
+    gltf.images.append(Image(uri="textures" + os.sep + ename))
+    albedo.close()
+
+def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage.Image, name: str, CNS_seen: List[int]):
+    x = im.getchannel("A")
+    y = im.getchannel("G")
+    z = ImageChops.constant(im.getchannel("A"), 255)
+    normal_name = str(Path(name).with_suffix(".png"))
+    gltf.textures[min(CNS_seen) * 4 + 2].name = normal_name
+    gltf.textures[min(CNS_seen) * 4 + 2].source = len(gltf.images)
+    gltf.images.append(Image(uri="textures" + os.sep + normal_name))
+    normal = PILImage.merge("RGB", [x, y, z])
+    textures[normal_name] = normal
+
+    secondary_tint = PILImage.eval(im.getchannel("R"), lambda x: 255 if x < 50 else 0)
+    primary_tint = PILImage.eval(im.getchannel("B"), lambda x: 255 if x < 50 else 0)
+    camo_tint = PILImage.eval(im.getchannel("B"), lambda x: 255 if x > 150 else 0)
+    tints = PILImage.merge("RGB", [primary_tint, secondary_tint, camo_tint])
+    tints_name = normal_name[:-5] + "T.png"
+    gltf.images.append(Image(uri="textures" + os.sep + tints_name))
+    textures[tints_name] = tints
+
+def dme_to_gltf(dme: DME, manager: AssetManager) -> Tuple[GLTF2, bytes, Dict[str, PILImage.Image]]:
     gltf = GLTF2()
     blob = b''
     offset = 0
+    mats = {}
+    for material in dme.dmat.materials:
+        if material.namehash in mats:
+            continue
+        mats[material.namehash] = len(gltf.materials)
+
+        new_mat = Material(
+            name=MaterialDefinitions[material.namehash].name,
+            pbrMetallicRoughness = PbrMetallicRoughness(
+                baseColorTexture=TextureInfo(index=len(gltf.materials) * 4, texCoord=0),
+                metallicRoughnessTexture=TextureInfo(index=len(gltf.materials) * 4 + 1, texCoord=0)
+            ),
+            normalTexture=NormalMaterialTexture(index=len(gltf.materials) * 4 + 2, texCoord=0),
+            emissiveTexture=TextureInfo(index=len(gltf.materials) * 4 + 3, texCoord=0),
+            emissiveFactor=[50, 50, 50]
+        )
+        gltf.materials.append(new_mat)
+        for i in range(4):
+            gltf.textures.append(Texture())
+
     for i, mesh in enumerate(dme.meshes):
         logging.info(f"Writing mesh {i + 1} of {len(dme.meshes)}")
         vertices_bin = numpy.array(mesh.vertices, dtype=numpy.single).flatten().tobytes()
@@ -133,33 +196,14 @@ def dme_to_gltf(dme: DME, embed_textures: bool = False) -> Tuple[GLTF2, bytes, D
             blob += tangents_bin
         
         
-        for i, uvs in mesh.uvs.items():
+        for j, uvs in mesh.uvs.items():
             bin = numpy.array(uvs, dtype=numpy.single).flatten().tobytes()
-            attributes.append([f"TEXCOORD_{i}", len(gltf.accessors)])
+            attributes.append([f"TEXCOORD_{j}", len(gltf.accessors)])
             gltf.accessors.append(Accessor(
                 bufferView=len(gltf.bufferViews),
                 componentType=FLOAT,
                 count=len(uvs),
                 type=VEC2
-            ))
-            gltf.bufferViews.append(BufferView(
-                buffer=0,
-                byteOffset=offset,
-                byteStride=8,
-                byteLength=len(bin),
-                target=ARRAY_BUFFER
-            ))
-            offset += len(bin)
-            blob += bin
-        
-        for i, colors in mesh.colors.items():
-            bin = numpy.array(colors, dtype=numpy.single).flatten().tobytes()
-            attributes.append([f"COLOR_{i}", len(gltf.accessors)])
-            gltf.accessors.append(Accessor(
-                bufferView=len(gltf.bufferViews),
-                componentType=FLOAT,
-                count=len(colors),
-                type=VEC4
             ))
             gltf.bufferViews.append(BufferView(
                 buffer=0,
@@ -178,7 +222,8 @@ def dme_to_gltf(dme: DME, embed_textures: bool = False) -> Tuple[GLTF2, bytes, D
         gltf.meshes.append(Mesh(
             primitives=[Primitive(
                 attributes=Attributes(**{name: value for name, value in attributes}),
-                indices=gltf_mesh_indices
+                indices=gltf_mesh_indices,
+                material=mats[dme.dmat.materials[i].namehash] if len(mats) > 0 else None
             )]
         ))
         
@@ -186,24 +231,39 @@ def dme_to_gltf(dme: DME, embed_textures: bool = False) -> Tuple[GLTF2, bytes, D
         byteLength=len(blob)
     ))
 
+    gltf.scene = 0
+    gltf.scenes.append(Scene(nodes=[i for i in range(len(gltf.nodes))]))
+
     textures = {}
-    if embed_textures and len(dme.dmat.textures) > 0:
-        global pool
-        manager = get_manager(pool)
+    if len(dme.dmat.textures) > 0:
         if not manager.loaded.is_set():
             logging.info("Waiting for assets to load...")
         manager.loaded.wait()
         logging.info("Game assets loaded! Dumping textures")
-        for name in set(dme.dmat.textures):
-            texture = manager.get_raw(name)
-            if texture is not None:
+        CNS_seen = [len(gltf.textures) / 4, len(gltf.textures) / 4, len(gltf.textures) / 4]
+        for name in dme.dmat.textures:
+            if str(Path(name).with_suffix(".png")) not in textures:
+                texture = manager.get_raw(name)
+                if texture is None:
+                    logging.warning(f"Could not find {name} in loaded game assets, skipping...")
+                    continue
                 logging.info(f"Loaded {name}")
+
                 im = PILImage.open(BytesIO(texture.get_data()))
-                texture.name = str(Path(name).with_suffix(".png"))
-                textures[texture.name] = im
-                gltf.images.append(Image(uri="textures" + os.sep + texture.name))
-            else:
-                logging.warning(f"Could not find {name} in loaded game assets, skipping...")
+                if re.match(".*_(s|S).dds", name):
+                    unpack_specular(manager, gltf, textures, im, name, CNS_seen)
+                    CNS_seen[2] += 1
+                elif re.match(".*_(n|N).dds", name):
+                    unpack_normal(gltf, textures, im, name, CNS_seen)
+                    CNS_seen[1] += 1
+                else:
+                    texture.name = str(Path(name).with_suffix(".png"))
+                    textures[texture.name] = im
+                    if re.match(".*_(c|C).dds", name):
+                        gltf.textures[min(CNS_seen) * 4].name = texture.name
+                        gltf.textures[min(CNS_seen) * 4].source = len(gltf.images)
+                        CNS_seen[0] += 1
+                    gltf.images.append(Image(uri="textures" + os.sep + texture.name))
 
     return gltf, blob, textures
 
@@ -213,29 +273,27 @@ def save_textures(output: str, textures: Dict[str, PILImage.Image]):
     for texture_name in textures:
         textures[texture_name].save(save_directory / texture_name, format="png")
 
-def to_glb(dme: DME, output: str, embed_textures: bool = False):
-    gltk, blob, textures = dme_to_gltf(dme, embed_textures)
+def to_glb(dme: DME, output: str, manager: AssetManager):
+    gltk, blob, textures = dme_to_gltf(dme, manager)
     gltk.set_binary_blob(blob)
     gltk.save_binary(output)
-    if embed_textures:
-        save_textures(output, textures)
+    save_textures(output, textures)
 
 
-def to_gltf(dme: DME, output: str, embed_textures: bool = False):
-    gltk, blob, textures = dme_to_gltf(dme, embed_textures)
+def to_gltf(dme: DME, output: str,  manager: AssetManager):
+    gltk, blob, textures = dme_to_gltf(dme, manager)
     blobpath = Path(output).with_suffix(".bin")
     with open(blobpath, "wb") as blob_out:
         blob_out.write(blob)
     gltk.buffers[0].uri = blobpath.name
     gltk.save_json(output)
-    if embed_textures:
-        save_textures(output, textures)
+    save_textures(output, textures)
 
 manager: AssetManager = None
 pool: multiprocessing.pool.Pool = None
 
 
-def get_manager(pool) -> AssetManager:
+def get_manager(pool: multiprocessing.pool.Pool) -> AssetManager:
     global manager
     if manager is not None:
         return manager
@@ -257,15 +315,14 @@ def main():
     parser.add_argument("--format", "-f", choices=["stl", "gltf", "obj", "glb"], help="The output format to use, required for conversion")
     parser.add_argument("--material-hashes", "-m", type=int, nargs="+", help="The name hash(es) of the materials to use for each mesh when loading the DME data")
     parser.add_argument("--dump-textures", "-t", action="store_true", help="Dump the filenames of the textures used by the model to stdout and exit")
-    parser.add_argument("--embed-textures", "-e", action="store_true", help="Embed the texture filenames used by the model in the output file, saving the textures alongside the output (GLTF/GLB only)")
     parser.add_argument("--verbose", "-v", help="Increase log level, can be specified multiple times", action="count", default=0)
     args = parser.parse_args()
 
     logging.basicConfig(level=max(logging.WARNING - 10 * args.verbose, logging.DEBUG), handlers=[handler])
     pool = multiprocessing.Pool(8)
     try:
-        if args.embed_textures:
-            get_manager(pool)
+        if not args.dump_textures:
+            manager = get_manager(pool)
         with open(args.input_file, "rb") as in_file:
             dme = DME.load(
                 in_file,
@@ -293,9 +350,9 @@ def main():
         elif args.format == "stl":
             to_stl(dme, str(tmp_output_path))
         elif args.format == "glb":
-            to_glb(dme, str(tmp_output_path), args.embed_textures)
+            to_glb(dme, str(tmp_output_path), manager)
         elif args.format == "gltf":
-            to_gltf(dme, str(tmp_output_path), args.embed_textures)
+            to_gltf(dme, str(tmp_output_path), manager)
 
         os.replace(tmp_output_path, output_path)
     except FileNotFoundError:

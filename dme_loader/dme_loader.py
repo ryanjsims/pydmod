@@ -378,6 +378,11 @@ class Material:
             self.__encoded_parameters = b''.join([param.serialize() for param in self.parameters])
         return self.__encoded_parameters
     
+    def name(self) -> Optional[str]:
+        if self.definition in MaterialDefinitions:
+            return MaterialDefinitions[self.definition].name
+        return None
+    
     def input_layout(self, material_hash: Optional[int] = None) -> InputLayout:
         input_layout = None
         try:
