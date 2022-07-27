@@ -1,7 +1,7 @@
 import struct
 import logging
 from dataclasses import dataclass
-from io import BytesIO
+from io import SEEK_END, SEEK_SET, BytesIO
 from typing import List, Tuple, Union
 from cnkdec import Decompressor
 
@@ -63,20 +63,27 @@ class Tile:
     unk2: int
     ecos: List[Eco]
     index: int
-    unk3: int
     image_data: bytes
     layer_textures: List[int]
 
     @classmethod
     def load(cls, data: BytesIO) -> 'Tile':
-        x, y, unk1, unk2, eco_count = struct.unpack("<iiiiI", data.read(20))
+        logger.debug(f"offset: {hex(data.tell())}")
+        to_unpack = data.read(20)
+        logger.debug(f"Attempting to unpack {len(to_unpack)} bytes... ({to_unpack})")
+        x, y, unk1, unk2, eco_count = struct.unpack("<iiiiI", to_unpack)
         logger.debug(f"Loading {eco_count} ecos...")
         ecos = [Eco.load(data) for _ in range(eco_count)]
-        index, unk3, img_length = struct.unpack("<III", data.read(12))
-        image_data = data.read(img_length)
+        index, img_id = struct.unpack("<II", data.read(8))
+        logger.debug(f"Index: {index} img_id: {img_id}")
+        image_data = None
+        if img_id:
+            img_length = struct.unpack("<I", data.read(4))[0]
+            image_data = data.read(img_length)
         layer_length = struct.unpack("<I", data.read(4))[0]
+        logger.debug(f"Loading layer textures of length {layer_length}")
         layer_textures = list(map(lambda x: x[0], struct.iter_unpack("<B", data.read(layer_length))))
-        return cls(x, y, unk1, unk2, ecos, index, unk3, image_data, layer_textures)
+        return cls(x, y, unk1, unk2, ecos, index, image_data, layer_textures)
     
     def __repr__(self) -> str:
         return f"Tile(x={self.x}, y={self.y}, unk1={self.unk1}, unk2={self.unk2}, ecos=Eco[{len(self.ecos)}], index={self.index}, image_data={self.image_data[:4]} + {len(self.image_data[4:])} bytes, layer_textures={self.layer_textures})"
@@ -160,10 +167,37 @@ class CNK0:
     unk_shorts: List[int]
     unk_vectors: List[Tuple[float, float, float]]
     tile_occluder_info: List[TileOccluderInfo]
+    verts: List[Tuple[float, float, float]]
+    uvs: List[Tuple[float, float]]
+    triangles: List[List[int]]
+    aabb: Tuple[Tuple[float, float, float], Tuple[float, float, float]]
+
+    def calculate_verts(self):
+        minimum, maximum = None, None
+        for i in range(len(self.render_batches)):
+            for j in range(self.render_batches[i].vertex_count):
+                offset = self.render_batches[i].vertex_offset + j
+                x = float(self.vertices[offset].x - (((len(self.render_batches) - 1 - i) % 4) + 1) * 64)
+                z = float(self.vertices[offset].y - (((len(self.render_batches) - 1 - i) >> 2) + 1) * 64)
+                heightNear = float(self.vertices[offset].height_near / 32)
+
+                self.verts.append((x, heightNear, z))
+                if minimum is None or self.verts[-1][0] < minimum[0] and self.verts[-1][1] < minimum[1] and self.verts[-1][2] < minimum[2]:
+                    minimum = self.verts[-1]
+                if maximum is None or self.verts[-1][0] > maximum[0] and self.verts[-1][1] > maximum[1] and self.verts[-1][2] > maximum[2]:
+                    maximum = self.verts[-1]
+                self.uvs.append((z / 128, 1 - x / 128))
+            
+            self.triangles.append([0] * self.render_batches[i].index_count)
+            for j in range(self.render_batches[i].index_count):
+                self.triangles[i][self.render_batches[i].index_count - 1 - j] = self.indices[j + self.render_batches[i].index_offset] + self.render_batches[i].vertex_offset
+        self.aabb = (minimum if minimum is not None else (0, 0, 0), maximum if maximum is not None else (0, 0, 0))
 
     @classmethod
     def load(cls, data: BytesIO) -> 'CNK0':
-        logger.info("Loading CNK0 file...")
+        data.seek(0, SEEK_END)
+        logger.info(f"Loading CNK0 file of length {data.tell()}...")
+        data.seek(0, SEEK_SET)
         header = Header.load(data)
         if header.magic != b'CNK0':
             raise ValueError("Not a CNK0 file!")
@@ -185,7 +219,7 @@ class CNK0:
         tile_occluder_info_len = struct.unpack("<I", data.read(4))[0]
         tile_occluder_info = [TileOccluderInfo.load(data) for _ in range(tile_occluder_info_len)]
         logger.info("CNK0 file loaded")
-        return cls(header, tiles, unk1, unkArr1, indices, vertices, render_batches, optimized_draw, unk_shorts, unk_vectors, tile_occluder_info)
+        return cls(header, tiles, unk1, unkArr1, indices, vertices, render_batches, optimized_draw, unk_shorts, unk_vectors, tile_occluder_info, [], [], [], ())
 
 @dataclass
 class CNK1:
@@ -203,22 +237,27 @@ class ForgelightChunk:
     chunk: Union[CNK0, CNK1]
 
     @classmethod
-    def load(cls, data: BytesIO, compressed: bool = True) -> Union[CNK0, CNK1]:
+    def decompress(cls, data: BytesIO) -> BytesIO:
         header = Header.load(data)
+        logger.info("Decompressing chunk data...")
+        decompressor = Decompressor()
+        logger.info(f"Decompressor lib version: {decompressor.version()}")
+        decompressed_size, compressed_size = struct.unpack("<II", data.read(8))
+        compressed_data = data.read()
+        logger.info(f"Decompressed size: {decompressed_size}")
+        logger.info(f"Compressed size: {compressed_size}")
+        if len(compressed_data) != compressed_size:
+            logger.warning(f"Compressed data length {len(compressed_data)} != file value {compressed_size}")
+        decompressed_data = decompressor.decompress(compressed_data, decompressed_size)
+        if len(decompressed_data) != decompressed_size:
+            logger.warning("Decompressed data length different from listed size!")
+        return BytesIO(header.serialize() + decompressed_data)
+
+    @classmethod
+    def load(cls, data: BytesIO, compressed: bool = True) -> Union[CNK0, CNK1]:
         if compressed:
-            logger.info("Decompressing chunk data...")
-            decompressor = Decompressor()
-            logger.info(f"Decompressor lib version: {decompressor.version()}")
-            decompressed_size, compressed_size = struct.unpack("<II", data.read(8))
-            compressed_data = data.read()
-            logger.info(f"Decompressed size: {decompressed_size}")
-            logger.info(f"Compressed size: {compressed_size}")
-            if len(compressed_data) != compressed_size:
-                logger.warning(f"Compressed data length {len(compressed_data)} != file value {compressed_size}")
-            decompressed_data = decompressor.decompress(compressed_data, decompressed_size)
-            if len(decompressed_data) != decompressed_size:
-                logger.warning("Decompressed data length different from listed size!")
-            data = BytesIO(header.serialize() + decompressed_data)
+            data = cls.decompress(data)
+        header = Header.load(data)
         data.seek(0)
         
         if header.magic == b'CNK0':

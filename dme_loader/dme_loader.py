@@ -7,9 +7,10 @@ from io import BytesIO
 from typing import List, Optional, Tuple, Dict
 from enum import IntEnum
 from aabbtree import AABB
+from numpy import indices
 
 from . import jenkins
-from .data_classes import *
+from .data_classes import VertexStream, InputLayout, MaterialDefinition, ParameterGroup, LayoutUsage, input_layout_formats
 
 logger = logging.getLogger("dme_loader")
 
@@ -18,6 +19,7 @@ with open(os.path.join(os.path.dirname(__file__), "materials_new.json")) as f:
 
 InputLayouts = {key: InputLayout.from_json(value) for key, value in materialsJson["inputLayouts"].items()}
 MaterialDefinitions = {int(key): MaterialDefinition.from_json(value) for key, value in materialsJson["materialDefinitions"].items()}
+ParameterGroups = {key: ParameterGroup.from_json(value) for key, value in materialsJson["parameterGroups"].items()}
 
 def normalize(vertex: Tuple[float, float, float]):
     length = math.sqrt(vertex[0] ** 2 + vertex[1] ** 2 + vertex[2] ** 2)
@@ -86,8 +88,8 @@ class DrawCall:
         return cls(*struct.unpack("<IIIIIIIII", data.read(36)))
 
 class Mesh:
-    def __init__(self, bytes_per_vertex: List[int], vertex_streams: List[VertexStream], vertices: List[Tuple[float]], colors: Dict[int, List[Tuple]],
-                    normals: List[Tuple[float]], binormals: List[Tuple[float]], tangents: List[Tuple[float]], uvs: Dict[int, List[Tuple[float]]], 
+    def __init__(self, bytes_per_vertex: List[int], vertex_streams: List[VertexStream], vertices: Dict[int, List[Tuple[float]]], colors: Dict[int, List[Tuple]],
+                    normals: Dict[int, List[Tuple[float]]], binormals: Dict[int, List[Tuple[float]]], tangents: Dict[int, List[Tuple[float]]], uvs: Dict[int, List[Tuple[float]]], 
                     skin_weights: List[Tuple[float]], skin_indices: List[Tuple[int]], index_size: int, 
                     indices: List[int], draw_offset: int, draw_count: int, bone_count: int, draw_calls: List[DrawCall], bone_map_entries: Dict[int, int], bones: List[Bone]):
         self.vertex_size = bytes_per_vertex
@@ -109,6 +111,22 @@ class Mesh:
         self.bone_map = bone_map_entries
         self.bones = bones
         self.__serialized = None
+    
+    def close(self):
+        for stream in self.vertex_streams:
+            stream.close()
+        del self.vertices
+        del self.colors
+        del self.normals
+        del self.binormals
+        del self.tangents
+        del self.uvs
+        del self.skin_indices
+        del self.skin_weights
+        del self.indices
+        del self.bones
+        del self.draw_calls
+        del self.bone_map
 
     def __str__(self) -> str:
         return f"Mesh (vertex count {len(self.vertices)} draw calls {len(self.draw_calls)} indices {len(self.indices)})"
@@ -145,12 +163,12 @@ class Mesh:
         vert_stream_count, index_size, index_count, vertex_count = struct.unpack("<IIII", data.read(16))
         
         bpv_list = []
-        vertices = []
+        vertices: Dict[int, List[Tuple]] = {}
         colors: Dict[int, List[Tuple]] = {}
         uvs: Dict[int, List[Tuple]] = {}
-        normals = []
-        binormals = []
-        tangents = []
+        normals: Dict[int, List[Tuple]] = {}
+        binormals: Dict[int, List[Tuple]] = {}
+        tangents: Dict[int, List[Tuple]] = {}
         vertex_streams: List[VertexStream] = []
         skin_indices = []
         skin_weights = []
@@ -198,13 +216,21 @@ class Mesh:
                         value = [(((value[0] >> i * 8) & 0xFF) / 255 * 2) - 1 for i in range(4)]
 
                     if entry.usage == LayoutUsage.POSITION:
-                        vertices.append(value)
+                        if entry.usage_index not in vertices:
+                            vertices[entry.usage_index] = []
+                        vertices[entry.usage_index].append(value)
                     elif entry.usage == LayoutUsage.NORMAL:
-                        normals.append(value)
+                        if entry.usage_index not in normals:
+                            normals[entry.usage_index] = []
+                        normals[entry.usage_index].append(value)
                     elif entry.usage == LayoutUsage.BINORMAL:
-                        binormals.append(value)
+                        if entry.usage_index not in binormals:
+                            binormals[entry.usage_index] = []
+                        binormals[entry.usage_index].append(value)
                     elif entry.usage == LayoutUsage.TANGENT:
-                        tangents.append(value)
+                        if entry.usage_index not in tangents:
+                            tangents[entry.usage_index] = []
+                        tangents[entry.usage_index].append(value)
                     elif entry.usage == LayoutUsage.BLENDWEIGHT:
                         skin_weights.append(value)
                     elif entry.usage == LayoutUsage.BLENDINDICES:
@@ -221,21 +247,23 @@ class Mesh:
             logger.error(f"Failed to read data at vertex {i}, format {entry.type}, stream {entry.stream}, stream position {vertex_streams[entry.stream].tell()}")
             raise e
 
-        if len(normals) == 0 and len(binormals) > 0 and len(tangents) > 0:
-            for binormal, tangent in zip(binormals, tangents):
-                b = normalize(binormal)
-                t = normalize(tangent)
-                if len(tangent) == 4:
-                    sign = tangent[3]
-                else:
-                    sign = -1
-                n = normalize((
-                    b[1] * t[2] - b[2] * t[1],
-                    b[2] * t[0] - b[0] * t[2],
-                    b[0] * t[1] - b[1] * t[0],
-                ))
-                n = [val * sign for val in n]
-                normals.append(n)
+        for entry_index in binormals:
+            if entry_index not in normals and len(binormals[entry_index]) > 0 and len(tangents[entry_index]) > 0:
+                normals[entry_index] = []
+                for binormal, tangent in zip(binormals[entry_index], tangents[entry_index]):
+                    b = normalize(binormal)
+                    t = normalize(tangent)
+                    if len(tangent) == 4:
+                        sign = tangent[3]
+                    else:
+                        sign = -1
+                    n = normalize((
+                        b[1] * t[2] - b[2] * t[1],
+                        b[2] * t[0] - b[0] * t[2],
+                        b[0] * t[1] - b[1] * t[0],
+                    ))
+                    n = [val * sign for val in n]
+                    normals[entry_index].append(n)
         
         indices = []
         index_format = "<H"
@@ -322,13 +350,37 @@ class D3DXParamClass(IntEnum):
 class Parameter:
     def __init__(self, namehash: int, param_class: D3DXParamClass, param_type: D3DXParamType, data: bytes):
         self.namehash = namehash
+        self.name = None
+        for group in ParameterGroups:
+            if self.namehash in ParameterGroups[group]:
+                self.name = ParameterGroups[group][self.namehash].name
+                break
         self._class = param_class
         self._type = param_type
+        self.value = None
+        self.vector = None
         if self._class == D3DXParamClass.VECTOR and self._type == D3DXParamType.FLOAT:
             self.vector = tuple([val[0] for val in struct.iter_unpack("<f", data)])
-        else:
-            self.vector = tuple()
+        elif self._class == D3DXParamClass.VECTOR and self._type == D3DXParamType.INT:
+            self.vector = tuple([val[0] for val in struct.iter_unpack("<i", data)])
+        elif self._class == D3DXParamClass.VECTOR and self._type == D3DXParamType.BOOL:
+            self.vector = tuple([val[0] for val in struct.iter_unpack("<?", data)])
+        elif self._type == D3DXParamType.STRING:
+            self.value = data.decode("utf-8")
+        elif self._type == D3DXParamType.INT:
+            self.value = struct.unpack("<i", data)[0]
+        elif self._type == D3DXParamType.FLOAT:
+            self.value = struct.unpack("<f", data)[0]
+        elif self._type == D3DXParamType.BOOL:
+            self.value = struct.unpack("<i", data)[0]
         self.data = data
+        if self.vector is not None:
+            logger.debug(f"    vector:  {self.vector}")
+        if self.value is not None:
+            logger.debug(f"    value:  {self.value}")
+
+    def close(self):
+        del self.data
 
     def __len__(self):
         return 16 + len(self.data)
@@ -337,10 +389,10 @@ class Parameter:
         return struct.pack("<IIII", self.namehash, self._class, self._type, len(self.data)) + self.data
 
     def __str__(self) -> str:
-        return f"DMAT Parameter {self._class} {self._type} {repr(self.data) if not self.vector else repr(self.vector)}"
+        return f"DMAT Parameter {self.name + ' ' if self.name else ''}{self._class} {self._type} {repr(self.data) if not self.vector else repr(self.vector) if not self.value else repr(self.value)}"
     
     def __repr__(self):
-        return f"Parameter({self.namehash}, {repr(self._class)}, {repr(self._type)}, {repr(self.data) if not self.vector else repr(self.vector)})"
+        return f"Parameter({self.namehash}, {repr(self._class)}, {repr(self._type)}, {repr(self.data) if not self.vector else repr(self.vector) if not self.value else repr(self.value)})"
 
     @classmethod
     def load(cls, data: BytesIO) -> 'Parameter':
@@ -361,6 +413,11 @@ class Material:
         self.parameters = parameters
         self.__encoded_parameters = None
     
+    def close(self):
+        for parameter in self.parameters:
+            parameter.close()
+        del self.parameters
+
     def __len__(self):
         return 16 + len(self.encode_parameters())
     
@@ -412,7 +469,7 @@ class Material:
         namehash, length, definition, num_params = struct.unpack("<IIII", data.read(16))
         logger.info(f"Material data - Name hash: 0x{namehash:08X}    Length: {length}    Definition hash: 0x{definition:08X}    Parameter count: {num_params}")
         offset += 16
-        parameters = []
+        parameters: List[Parameter] = []
         for i in range(num_params):
             parameters.append(Parameter.load(data))
             offset += len(parameters[i])
@@ -430,6 +487,12 @@ class DMAT:
         self.__encoded_textures = None
         self.__encoded_materials = None
         self.__length = None
+
+    def close(self):
+        for material in self.materials:
+            material.close()
+        del self.materials
+        del self.textures
 
     def serialize(self) -> bytes:
         return struct.pack("<I", len(self)) + self.magic.encode("utf-8") + struct.pack("<I", self.version) + self.encode_textures() + self.encode_materials()
@@ -489,6 +552,13 @@ class DME:
         self.dmat = dmat
         self.aabb = aabb
         self.meshes = meshes
+
+    def close(self):
+        self.dmat.close()
+        for mesh in self.meshes:
+            mesh.close()
+        del self.dmat
+        del self.meshes
 
     @classmethod
     def load(cls, data: BytesIO, material_hashes: Optional[List[int]] = None, textures_only: bool = False) -> 'DME':

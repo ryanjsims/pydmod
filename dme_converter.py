@@ -51,7 +51,7 @@ def to_obj(dme: DME, output: FileIO):
             i0, i1, i2 = mesh.indices[i] + 1, mesh.indices[i+1] + 1, mesh.indices[i+2] + 1
             output.write(f"f {i1}/{i1} {i0}/{i0} {i2}/{i2}\n")
 
-def dme_to_gltf(dme: DME, manager: AssetManager) -> Tuple[GLTF2, bytes, Dict[str, PILImage.Image]]:
+def dme_to_gltf(dme: DME, manager: AssetManager, dme_name: str) -> Tuple[GLTF2, bytes, Dict[str, PILImage.Image]]:
     gltf = GLTF2()
     blob = b''
     offset = 0
@@ -59,7 +59,7 @@ def dme_to_gltf(dme: DME, manager: AssetManager) -> Tuple[GLTF2, bytes, Dict[str
     textures = {}
 
     #node_start = len(gltf.nodes)
-    offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, offset, blob)
+    offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, offset, blob, dme_name)
     #node_end = len(gltf.nodes)
 
     #gltf.nodes.append(Node(children=[i for i in range(node_start, node_end)]))
@@ -76,17 +76,21 @@ def save_textures(output: str, textures: Dict[str, PILImage.Image]):
     save_directory = Path(output).parent / "textures"
     save_directory.mkdir(exist_ok=True, parents=True)
     for texture_name in textures:
+        if textures[texture_name] is None:
+            continue
         textures[texture_name].save(save_directory / texture_name, format="png")
+        textures[texture_name].close()
+        textures[texture_name] = None
 
-def to_glb(dme: DME, output: str, manager: AssetManager):
-    gltk, blob, textures = dme_to_gltf(dme, manager)
+def to_glb(dme: DME, output: str, manager: AssetManager, dme_name: str):
+    gltk, blob, textures = dme_to_gltf(dme, manager, dme_name)
     gltk.set_binary_blob(blob)
     gltk.save_binary(output)
     save_textures(output, textures)
 
 
-def to_gltf(dme: DME, output: str,  manager: AssetManager):
-    gltk, blob, textures = dme_to_gltf(dme, manager)
+def to_gltf(dme: DME, output: str,  manager: AssetManager, dme_name: str):
+    gltk, blob, textures = dme_to_gltf(dme, manager, dme_name)
     blobpath = Path(output).with_suffix(".bin")
     with open(blobpath, "wb") as blob_out:
         blob_out.write(blob)

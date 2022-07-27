@@ -4,7 +4,7 @@ import logging
 
 from argparse import ArgumentParser
 from DbgPack import AssetManager
-from io import BytesIO, FileIO
+from io import BytesIO, FileIO, StringIO
 from typing import Optional
 
 from dme_loader import DME
@@ -18,10 +18,8 @@ handler.setFormatter(logging.Formatter(
     datefmt="%Y-%m-%d %H:%M:%S"
 ))
 
-def load_adr(filename: str) -> Optional[ET.Element]:
-    logger.info(f"Loading ADR file {filename}...")
-    with open(filename) as file:
-        tree = ET.parse(file)
+def load_adr(file: FileIO) -> Optional[ET.Element]:
+    tree = ET.parse(file)
     root = tree.getroot()
     if root.tag != "ActorRuntime":
         logger.error("File's root XML tag was not ActorRuntime!")
@@ -36,7 +34,21 @@ def get_base_model(root: ET.Element) -> Optional[str]:
     return base.get("fileName")
 
 def dme_from_adr(manager: AssetManager, adr_file: str) -> Optional[DME]:
-    root = load_adr(adr_file)
+    logger.info(f"Loading ADR file {adr_file}...")
+    try:
+        file = open(adr_file)
+    except FileNotFoundError:
+        if not manager.loaded.is_set():
+            logger.info("Waiting for assets to load...")
+        manager.loaded.wait()
+        adr_asset = manager.get_raw(adr_file)
+        if adr_asset is None:
+            logger.error(f"{adr_file} not found in either game assets or filesystem")
+            return None
+        file = StringIO(adr_asset.get_data().decode("utf-8"))
+
+    root = load_adr(file)
+    file.close()
     if root is None:
         return None
     dme_name = get_base_model(root)
@@ -49,7 +61,11 @@ def dme_from_adr(manager: AssetManager, adr_file: str) -> Optional[DME]:
     if dme_asset is None:
         logger.error(f"Could not find {dme_name} in loaded assets")
         return None
-    return DME.load(BytesIO(dme_asset.get_data()))
+    dme_file = BytesIO(dme_asset.get_data())
+    dme = DME.load(dme_file)
+    dme_file.close()
+    dme.name = dme_name
+    return dme
 
 
 def main():
@@ -64,11 +80,12 @@ def main():
 
     with multiprocessing.Pool(8) as pool:
         manager = get_manager(pool)
+
         dme = dme_from_adr(manager, args.input_file)
         if args.format == "gltf":
-            to_gltf(dme, args.output_file, manager)
+            to_gltf(dme, args.output_file, manager, dme.name)
         elif args.format == "glb":
-            to_glb(dme, args.output_file, manager)
+            to_glb(dme, args.output_file, manager, dme.name)
 
 
 if __name__ == "__main__":

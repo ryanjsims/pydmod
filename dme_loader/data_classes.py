@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 from io import BytesIO, SEEK_END
 from enum import Enum
@@ -37,6 +38,9 @@ class VertexStream:
         length = self.data.tell()
         self.data.seek(pos)
         return length
+    
+    def close(self):
+        self.data.close()
 
     def tell(self) -> int:
         return self.data.tell()
@@ -116,3 +120,39 @@ class MaterialDefinition:
         hash = data["hash"]
         draw_styles = [DrawStyle.from_json(draw_style) for draw_style in data["drawStyles"]]
         return cls(name, hash, draw_styles)
+
+@dataclass
+class Parameter:
+    _class: str
+    name: str
+    variable: str
+    default: Optional[str]
+
+    @classmethod
+    def from_json(cls, data: Dict) -> 'Parameter':
+        return cls(data["class"], data["name"], data["variable"], data["default"] if "default" in data else None)
+
+@dataclass
+class ParameterGroup:
+    name: str
+    hash: int
+    parameters: Dict[int, Parameter]
+
+    def __iter__(self):
+        return iter(self.parameters)
+        
+    def __len__(self) -> int:
+        return len(self.parameters)
+    
+    def __getitem__(self, index) -> Parameter:
+        return self.parameters[index]
+    
+    def __contains__(self, value: Parameter) -> bool:
+        return value in self.parameters
+
+    @classmethod
+    def from_json(cls, data: Dict) -> 'ParameterGroup':
+        name = data["name"]
+        hash = data["hash"]
+        parameters = {jenkins.oaat(param.name.encode("utf-8")): param for param in [Parameter.from_json(par) for par in data["parameters"]]}
+        return cls(name, hash, parameters)

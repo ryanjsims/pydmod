@@ -95,7 +95,13 @@ def read_cstr(data: BytesIO) -> str:
     value = data.read(1)
     while value[-1] != 0:
         value += data.read(1)
-    return str(value.strip(b'\0'), encoding='utf-8')
+    try:
+        string = str(value.strip(b'\0'), encoding='utf-8')
+    except UnicodeDecodeError as e:
+        display = value.strip(b'\0')
+        logger.error(f"Failed to decode bytes {display}")
+        raise e
+    return string
 
 @dataclass
 class TexturePart:
@@ -367,7 +373,8 @@ class Instance:
             float_pairs = None
             vector4_pairs = None
             unk_data2 = None
-            unk_int, unk_byte, unk_byte2, unk_float = struct.unpack("<IBBf", data.read(10))
+            unk_int, unk_byte, unk_float = struct.unpack("<IBf", data.read(9))
+            unk_byte2 = None
         
         return cls(translation, rotation, scale, unk_data, unk_float, uint_pairs, float_pairs, unk_int, vector4_pairs, unk_data2, unk_byte, unk_byte2)
         
@@ -380,6 +387,7 @@ class RuntimeObject:
     @classmethod
     def load(cls, data: BytesIO, version: int) -> 'RuntimeObject':
         actor_file = read_cstr(data)
+        logger.debug(f"Actor file: {actor_file}")
         unk_float, instance_count = struct.unpack("<fI", data.read(8))
         instances = [Instance.load(data, version) for _ in range(instance_count)]
         return cls(actor_file, unk_float, instances)
