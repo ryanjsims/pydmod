@@ -57,9 +57,10 @@ def dme_to_gltf(dme: DME, manager: AssetManager, dme_name: str) -> Tuple[GLTF2, 
     offset = 0
     mats = {}
     textures = {}
+    image_indices: Dict[str, int] = {}
 
     #node_start = len(gltf.nodes)
-    offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, offset, blob, dme_name)
+    offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, image_indices, offset, blob, dme_name)
     #node_end = len(gltf.nodes)
 
     #gltf.nodes.append(Node(children=[i for i in range(node_start, node_end)]))

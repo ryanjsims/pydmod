@@ -98,6 +98,9 @@ def main():
     blob: bytes = b''
     offset = 0
     instance_nodes = []
+    chunk_nodes = []
+    terrain_parent = None
+    actor_parent = None
 
     if args.terrain_enabled:
         for x in range(zone.header.start_x, zone.header.start_x + zone.header.chunks_x, 4):
@@ -107,13 +110,17 @@ def main():
                 chunk = ForgelightChunk.load(BytesIO(manager.get_raw(chunk_name).get_data()))
                 node_start = len(gltf.nodes)
                 offset, blob = add_chunk_to_gltf(gltf, chunk, offset, blob)
+                chunk_nodes.append(len(gltf.nodes))
                 gltf.nodes.append(Node(
                     name=Path(chunk_name).stem, 
                     children=list(range(node_start, len(gltf.nodes))),
                     translation=[64.0 * (y + 4), 0, 64.0 * (x + 4)]
                 ))
+        terrain_parent = len(gltf.nodes)
+        gltf.nodes.append(Node(name="Terrain", children=chunk_nodes))
 
     if args.actors_enabled:
+        image_indices: Dict[str, int] = {}
         for object in zone.objects:
             dme = dme_from_adr(manager, object.actor_file)
             if dme is None:
@@ -121,7 +128,7 @@ def main():
                 continue
 
             node_start = len(gltf.nodes)
-            offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, offset, blob, object.actor_file)
+            offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, image_indices, offset, blob, object.actor_file)
             node_end = len(gltf.nodes)
 
             logger.info(f"Adding {len(object.instances)} instances of {object.actor_file}")
@@ -157,13 +164,20 @@ def main():
                 ))
 
             instance_nodes.extend(instances)
+        actor_parent = len(gltf.nodes)
+        gltf.nodes.append(Node(name="Object Instances", children=instance_nodes))
     
     gltf.buffers.append(Buffer(
         byteLength=offset
     ))
 
+    scene_nodes = []
+    if terrain_parent:
+        scene_nodes.append(terrain_parent)
+    if actor_parent:
+        scene_nodes.append(actor_parent)
     gltf.scene = 0
-    gltf.scenes.append(Scene(nodes=instance_nodes))
+    gltf.scenes.append(Scene(nodes=scene_nodes))
 
     logger.info("Saving GLTF file...")
     if args.format == "glb":

@@ -15,14 +15,14 @@ logger = logging.getLogger("GLTF Helpers")
 TEXTURE_PER_MATERIAL = 4
 EMISSIVE_STRENGTH = 1
 
-def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[int, Material], textures: Dict[str, PILImage.Image], offset: int, blob: bytes, dme_name: str) -> Tuple[int, bytes]:
+def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[int, Material], textures: Dict[str, PILImage.Image], image_indices: Dict[str, int], offset: int, blob: bytes, dme_name: str) -> Tuple[int, bytes]:
     texture_groups = []
     for texture in dme.dmat.textures:
         match = re.match("(.*)_(C|c|N|n|S|s).dds", texture)
         if match and match.group(1) not in texture_groups:
             texture_groups.append(match.group(1))
     logger.info(f"Texture groups: {texture_groups}")
-    image_indices: Dict[str, int] = {}
+    
     mat_info = []
     for name in texture_groups:
         for suffix in ["_C.dds", "_N.dds", "_S.dds"]:
@@ -32,13 +32,13 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
         for suffix in ["_C.png", "_MR.png", "_N.png", "_E.png"]:
             if name + suffix not in image_indices:
                 continue
-            if "c" in suffix.lower():
+            if suffix == "_C.png":
                 mat_info_entry["base"] = TextureInfo(index=len(gltf.textures))
-            elif "mr" in suffix.lower():
+            elif suffix == "_MR.png":
                 mat_info_entry["met"] = TextureInfo(index=len(gltf.textures))
-            elif "n" in suffix.lower():
+            elif suffix == "_N.png":
                 mat_info_entry["norm"] = NormalMaterialTexture(index=len(gltf.textures))
-            elif "e" in suffix.lower():
+            elif suffix == "_E.png":
                 mat_info_entry["emis"] = TextureInfo(index=len(gltf.textures))
             gltf.textures.append(Texture(
                 name=name + suffix,
@@ -104,15 +104,17 @@ def unpack_specular(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILI
     gltf.images.append(Image(uri="textures" + os.sep + mrname))
 
 def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage.Image, name: str, texture_indices: Dict[str, int]):
-    is_packed = not PILImage.eval(im.getchannel("B"), (lambda x: 0 if x > 127 else 255)).getbbox()
+    is_packed = PILImage.eval(im.getchannel("B"), (lambda x: 0 if x > 127 else 255)).getbbox() is not None
     if is_packed:
         #Blue channel is not all >= 0.5, so its not a regular normal map
         x = im.getchannel("A")
         y = im.getchannel("G")
         z = ImageChops.constant(im.getchannel("A"), 255)
-        normal = PILImage.merge("RGB", [x, y, z])
     else:
-        normal = im
+        x = im.getchannel("A")
+        y = im.getchannel("G")
+        z = im.getchannel("B")
+    normal = PILImage.merge("RGB", [x, y, z])
     normal_name = str(Path(name).with_suffix(".png"))
     #gltf.textures[min(CNS_seen) * 4 + 2].name = normal_name
     #gltf.textures[min(CNS_seen) * 4 + 2].source = len(gltf.images)
