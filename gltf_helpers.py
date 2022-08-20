@@ -14,13 +14,29 @@ logger = logging.getLogger("GLTF Helpers")
 
 TEXTURE_PER_MATERIAL = 4
 EMISSIVE_STRENGTH = 1
+SUFFIX_TO_TYPE = {
+    "_C.png": "base",
+    "_MR.png": "met",
+    "_N.png": "norm",
+    "_E.png": "emis"
+}
 
-def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[int, Material], textures: Dict[str, PILImage.Image], image_indices: Dict[str, int], offset: int, blob: bytes, dme_name: str) -> Tuple[int, bytes]:
-    texture_groups = []
+texture_name_to_indices = {}
+
+def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[int, List[int]], textures: Dict[str, PILImage.Image], image_indices: Dict[str, int], offset: int, blob: bytes, dme_name: str) -> Tuple[int, bytes]:
+    global texture_name_to_indices
+    texture_groups_dict = {}
     for texture in dme.dmat.textures:
         match = re.match("(.*)_(C|c|N|n|S|s).dds", texture)
-        if match and match.group(1) not in texture_groups:
-            texture_groups.append(match.group(1))
+        if not match:
+            continue
+        if match.group(1) not in texture_groups_dict:
+            texture_groups_dict[match.group(1)] = 0
+        texture_groups_dict[match.group(1)] += 1
+    
+    texture_groups = [name for name, _ in sorted(list(texture_groups_dict.items()), key=lambda pair: pair[1], reverse=True)]
+
+
     logger.info(f"Texture groups: {texture_groups}")
     
     mat_info = []
@@ -30,30 +46,62 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
                 load_texture(manager, gltf, textures, name + suffix, image_indices)
         mat_info_entry = {"base": None, "met": None, "norm": None, "emis": None}
         for suffix in ["_C.png", "_MR.png", "_N.png", "_E.png"]:
-            if name + suffix not in image_indices:
+            if (name + suffix) not in image_indices:
                 continue
-            if suffix == "_C.png":
-                mat_info_entry["base"] = TextureInfo(index=len(gltf.textures))
-            elif suffix == "_MR.png":
-                mat_info_entry["met"] = TextureInfo(index=len(gltf.textures))
-            elif suffix == "_N.png":
+
+            if (name + suffix) in texture_name_to_indices:
+                if suffix == "_N.png":
+                    mat_info_entry["norm"] = NormalMaterialTexture(index=texture_name_to_indices[name + suffix])
+                else:
+                    mat_info_entry[SUFFIX_TO_TYPE[suffix]] = TextureInfo(index=texture_name_to_indices[name + suffix])
+                continue
+
+            if suffix == "_N.png":
                 mat_info_entry["norm"] = NormalMaterialTexture(index=len(gltf.textures))
-            elif suffix == "_E.png":
-                mat_info_entry["emis"] = TextureInfo(index=len(gltf.textures))
+            else:
+                mat_info_entry[SUFFIX_TO_TYPE[suffix]] = TextureInfo(index=len(gltf.textures))
+
+            texture_name_to_indices[name + suffix] = len(gltf.textures)
             gltf.textures.append(Texture(
                 name=name + suffix,
                 source=image_indices[name + suffix]
             ))
         mat_info.append(mat_info_entry)
     
+    mesh_materials = []
+    assert len(dme.meshes) == len(dme.dmat.materials), "Mesh count != material count"
+
     for i, material in enumerate(dme.dmat.materials):
-        materialhash = ((material.namehash << 32) + jenkins.oaat(dme_name.encode("utf-8")))
-        logger.warning(f"Material hash: {materialhash}")
-        mats[materialhash] = len(gltf.materials)
+        if material.namehash not in mats:
+            mats[material.namehash] = []
+
         if i < len(mat_info):
-            mat_textures = mat_info[i]
+            mat_textures: Dict[str, Optional[TextureInfo]] = mat_info[i]
         else:
-            mat_textures = {"base": None, "met": None, "norm": None, "emis": None}
+            mat_textures: Dict[str, Optional[TextureInfo]] = {"base": None, "met": None, "norm": None, "emis": None}
+        
+        # look for existing material that uses same textures
+        for mat_index in mats[material.namehash]:
+            logger.debug(f"gltf.materials[{mat_index}] == {gltf.materials[mat_index]}")
+            logger.debug(f"mat_textures == {mat_textures}")
+            baseColorTexture = gltf.materials[mat_index].pbrMetallicRoughness.baseColorTexture
+            if baseColorTexture is not None and mat_textures["base"] is not None and baseColorTexture.index == mat_textures["base"].index:
+                logger.info("Found existing material with same base texture")
+                mesh_materials.append(mat_index)
+                break
+            elif baseColorTexture is None and mat_textures["base"] is None:
+                logger.info("Found existing material with same (null) base texture")
+                mesh_materials.append(mat_index)
+                break
+        
+        # material was found and assigned to this mesh, continue
+        if len(mesh_materials) > i:
+            continue
+        
+        # material was not found - create new
+        logger.info(f"Creating new material instance #{len(mats[material.namehash]) + 1}")
+        mats[material.namehash].append(len(gltf.materials))
+        mesh_materials.append(len(gltf.materials))
 
         new_mat = Material(
             name=material.name(),
@@ -71,8 +119,7 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
     
     for i, mesh in enumerate(dme.meshes):
         logger.info(f"Writing mesh {i + 1} of {len(dme.meshes)}")
-        hash = (dme.dmat.materials[i].namehash << 32) + jenkins.oaat(dme_name.encode("utf-8")) if i < len(dme.dmat.materials) else 0
-        material_index = mats[hash] if hash in mats else 0
+        material_index = mesh_materials[i]
         offset, blob = add_mesh_to_gltf(gltf, dme, mesh, material_index, offset, blob)
         
     
@@ -104,7 +151,7 @@ def unpack_specular(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILI
     gltf.images.append(Image(uri="textures" + os.sep + mrname))
 
 def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage.Image, name: str, texture_indices: Dict[str, int]):
-    is_packed = PILImage.eval(im.getchannel("B"), (lambda x: 0 if x > 127 else 255)).getbbox() is not None
+    is_packed = True
     if is_packed:
         #Blue channel is not all >= 0.5, so its not a regular normal map
         x = im.getchannel("A")
@@ -121,6 +168,7 @@ def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage
     textures[normal_name] = normal
     texture_indices[normal_name] = len(gltf.images)
     gltf.images.append(Image(uri="textures" + os.sep + normal_name))
+
 
     if is_packed:
         secondary_tint = PILImage.eval(im.getchannel("R"), lambda x: 255 if x < 50 else 0)
@@ -250,7 +298,7 @@ def add_mesh_to_gltf(gltf: GLTF2, dme: DME, mesh: DMEMesh, material_index: int, 
 
     return offset, blob
 
-def add_chunk_to_gltf(gltf: GLTF2, chunk: CNK0, offset: int, blob: bytes) -> Tuple[int, bytes]:
+def add_chunk_to_gltf(gltf: GLTF2, chunk: CNK0, material_index: int, offset: int, blob: bytes) -> Tuple[int, bytes]:
     chunk.calculate_verts()
     triangles = []
     for batch in chunk.triangles:
@@ -324,7 +372,8 @@ def add_chunk_to_gltf(gltf: GLTF2, chunk: CNK0, offset: int, blob: bytes) -> Tup
     gltf.meshes.append(Mesh(
         primitives=[Primitive(
             attributes=Attributes(**{name: value for name, value in attributes}),
-            indices=gltf_mesh_indices
+            indices=gltf_mesh_indices,
+            material=material_index
         )]
     ))
 
@@ -345,6 +394,9 @@ def load_texture(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImag
     elif re.match(".*_(c|C).dds", name):
         #gltf.textures[min(CNS_seen) * 4].name = name
         texture_indices[str(Path(name).with_suffix(".png"))] = len(gltf.images)
-    name = str(Path(name).with_suffix(".png"))
-    textures[name] = im
+        name = str(Path(name).with_suffix(".png"))
+        textures[name] = im
+    else:
+        name = str(Path(name).with_suffix(".png"))
+        textures[name] = im
     gltf.images.append(Image(uri="textures" + os.sep + name))
