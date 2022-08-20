@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from io import SEEK_END, SEEK_SET, BytesIO
 from typing import List, Tuple, Union
 from cnkdec import Decompressor
+from PIL import Image, ImageChops
 
 logger = logging.getLogger("cnk_loader")
 
@@ -186,7 +187,7 @@ class CNK0:
                     minimum = self.verts[-1]
                 if maximum is None or self.verts[-1][0] > maximum[0] and self.verts[-1][1] > maximum[1] and self.verts[-1][2] > maximum[2]:
                     maximum = self.verts[-1]
-                self.uvs.append((z / 128, 1 - x / 128))
+                self.uvs.append((((z / 128) / 2) + 1, (-(1 - x / 128) + 1) / 2) - 1)
             
             self.triangles.append([0] * self.render_batches[i].index_count)
             for j in range(self.render_batches[i].index_count):
@@ -222,16 +223,102 @@ class CNK0:
         return cls(header, tiles, unk1, unkArr1, indices, vertices, render_batches, optimized_draw, unk_shorts, unk_vectors, tile_occluder_info, [], [], [], ())
 
 @dataclass
+class Texture:
+    color_nx_map: Image.Image
+    spec_ny_map: Image.Image
+    extra1: bytes
+    extra2: bytes
+    extra3: bytes
+    extra4: bytes
+
+    @classmethod
+    def load(cls, data: BytesIO) -> 'Texture':
+        color_len = struct.unpack("<I", data.read(4))[0]
+        logger.debug(f"Reading color texture of length {color_len}")
+        color_nx_map = Image.open(BytesIO(data.read(color_len)))
+        
+        spec_len = struct.unpack("<I", data.read(4))[0]
+        logger.debug(f"Reading specular texture of length {spec_len}")
+        spec_ny_map = Image.open(BytesIO(data.read(spec_len)))
+        
+        extra1_len = struct.unpack("<I", data.read(4))[0]
+        logger.debug(f"Reading extra data of length {extra1_len}")
+        extra1 = data.read(extra1_len)
+        
+        extra2_len = struct.unpack("<I", data.read(4))[0]
+        logger.debug(f"Reading extra data of length {extra2_len}")
+        extra2 = data.read(extra2_len)
+
+        extra3_len = struct.unpack("<I", data.read(4))[0]
+        logger.debug(f"Reading extra data of length {extra3_len}")
+        extra3 = data.read(extra3_len)
+
+        extra4_len = struct.unpack("<I", data.read(4))[0]
+        logger.debug(f"Reading extra data of length {extra4_len}")
+        extra4 = data.read(extra4_len)
+        
+        return cls(color_nx_map, spec_ny_map, extra1, extra2, extra3, extra4)
+
+    def __repr__(self) -> str:
+        return f"Texture([{self.color_nx_map[:16]}{'...' if len(self.color_nx_map) > 16 else ''}], [{self.spec_ny_map[:16]}{'...' if len(self.spec_ny_map) > 16 else ''}], [{self.extra1[:16]}{'...' if len(self.extra1) > 16 else ''}], [{self.extra2[:16]}{'...' if len(self.extra2) > 16 else ''}], [{self.extra3[:16]}{'...' if len(self.extra3) > 16 else ''}], [{self.extra4[:16]}{'...' if len(self.extra4) > 16 else ''}])"
+
+@dataclass
 class CNK1:
     header: Header
+    textures: List[Texture]
 
     @classmethod
     def load(cls, data: BytesIO) -> 'CNK1':
+        logger.info("Loading CNK1 file...")
         header = Header.load(data)
         if header.magic != b'CNK1':
             raise ValueError("Not a CNK1 file!")
-        return cls(header)
+        textures_len = struct.unpack("<I", data.read(4))[0]
+        logger.info(f"Loading {textures_len} textures...")
+        textures = [Texture.load(data) for _ in range(textures_len)]
+        logger.info(f"Loaded {len(textures)} textures")
+        logger.info("CNK1 file loaded")
+        return cls(header, textures)
 
+    def color(self) -> Image.Image:
+        combined_color = Image.new("RGB", (self.textures[0].color_nx_map.width * 2, self.textures[0].color_nx_map.height * 2))
+        width = self.textures[0].color_nx_map.width
+        height = self.textures[0].color_nx_map.height
+        combined_color.paste(self.textures[0].color_nx_map, (0, 0))
+        combined_color.paste(self.textures[1].color_nx_map, (width, 0))
+        combined_color.paste(self.textures[2].color_nx_map, (0, height))
+        combined_color.paste(self.textures[3].color_nx_map, (width, height))
+        return combined_color
+    
+    def specular(self) -> Image.Image:
+        temp = Image.new("RGB", (self.textures[0].spec_ny_map.width * 2, self.textures[0].spec_ny_map.height * 2))
+        width = self.textures[0].spec_ny_map.width
+        height = self.textures[0].spec_ny_map.height
+        temp.paste(self.textures[0].spec_ny_map, (0, 0))
+        temp.paste(self.textures[1].spec_ny_map, (width, 0))
+        temp.paste(self.textures[2].spec_ny_map, (0, height))
+        temp.paste(self.textures[3].spec_ny_map, (width, height))
+        r, g, b = temp.split()
+        g = ImageChops.invert(g)
+        b = ImageChops.invert(b)
+        combined_specular = Image.merge("RGBA", (r, g, b, r))
+        return combined_specular
+    
+    def normal(self) -> Image.Image:
+        width = self.textures[0].spec_ny_map.width
+        height = self.textures[0].spec_ny_map.height
+        x, y, z = Image.new("RGB", (width * 2, height * 2), (0, 0, 255)).split()
+        x.paste(self.textures[0].color_nx_map.getchannel("A"), (0, 0))
+        x.paste(self.textures[1].color_nx_map.getchannel("A"), (width, 0))
+        x.paste(self.textures[2].color_nx_map.getchannel("A"), (0, height))
+        x.paste(self.textures[3].color_nx_map.getchannel("A"), (width, height))
+        y.paste(self.textures[0].spec_ny_map.getchannel("A"), (0, 0))
+        y.paste(self.textures[1].spec_ny_map.getchannel("A"), (width, 0))
+        y.paste(self.textures[2].spec_ny_map.getchannel("A"), (0, height))
+        y.paste(self.textures[3].spec_ny_map.getchannel("A"), (width, height))
+        return Image.merge("RGB", (x, y, z))
+        
+    
 @dataclass
 class ForgelightChunk:
     chunk: Union[CNK0, CNK1]
@@ -239,13 +326,13 @@ class ForgelightChunk:
     @classmethod
     def decompress(cls, data: BytesIO) -> BytesIO:
         header = Header.load(data)
-        logger.info("Decompressing chunk data...")
+        logger.debug("Decompressing chunk data...")
         decompressor = Decompressor()
-        logger.info(f"Decompressor lib version: {decompressor.version()}")
+        logger.debug(f"Decompressor lib version: {decompressor.version()}")
         decompressed_size, compressed_size = struct.unpack("<II", data.read(8))
         compressed_data = data.read()
-        logger.info(f"Decompressed size: {decompressed_size}")
-        logger.info(f"Compressed size: {compressed_size}")
+        logger.debug(f"Decompressed size: {decompressed_size}")
+        logger.debug(f"Compressed size: {compressed_size}")
         if len(compressed_data) != compressed_size:
             logger.warning(f"Compressed data length {len(compressed_data)} != file value {compressed_size}")
         decompressed_data = decompressor.decompress(compressed_data, decompressed_size)
