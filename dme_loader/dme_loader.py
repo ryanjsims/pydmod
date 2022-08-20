@@ -375,9 +375,11 @@ class Parameter:
             self.value = struct.unpack("<i", data)[0]
         self.data = data
         if self.vector is not None:
-            logger.debug(f"    vector:  {self.vector}")
+            logger.debug(f"    vector: {self.vector}")
         if self.value is not None:
             logger.debug(f"    value:  {self.value}")
+        if self._class == D3DXParamClass.OBJECT:
+            logger.debug(f"    object: {struct.unpack('<I', data)[0]}")
 
     def close(self):
         del self.data
@@ -401,8 +403,8 @@ class Parameter:
         param_data = data.read(length)
         t = D3DXParamType(param_type)
         c = D3DXParamClass(param_class)
-        logger.debug(f"    type:  {t.name}")
-        logger.debug(f"    class: {c.name}")
+        logger.debug(f"    type:   {t.name}")
+        logger.debug(f"    class:  {c.name}")
 
         return cls(param_hash, c, t, param_data)
 
@@ -514,9 +516,10 @@ class DMAT:
         return self.__encoded_materials
     
     @classmethod
-    def load(cls, data: BytesIO) -> 'DMAT':
+    def load(cls, data: BytesIO, dmat_length: int = None) -> 'DMAT':
         logger.info("Loading DMAT chunk")
-        dmat_length = struct.unpack("<I", data.read(4))[0]
+        if not dmat_length:
+            dmat_length = struct.unpack("<I", data.read(4))[0]
         offset = 0
         magic = data.read(4)
         offset += 4
@@ -544,6 +547,12 @@ class DMAT:
         return cls(magic, version, texture_names, materials)
 
 class DME:
+    magic: str
+    version: int
+    dmat: DMAT
+    aabb: AABB
+    meshes: List[Mesh]
+    
     def __init__(self, magic: str, version: int, dmat: DMAT, aabb: AABB, meshes: List[Mesh]):
         assert magic == "DMOD", "Not a DME file"
         assert version == 4, "Unsupported DME version"

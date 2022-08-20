@@ -58,7 +58,8 @@ def dme_to_gltf(dme: DME, manager: AssetManager, dme_name: str) -> Tuple[GLTF2, 
     mats = {}
     textures = {}
     image_indices: Dict[str, int] = {}
-
+    if not manager.loaded.is_set():
+        manager.loaded.wait()
     #node_start = len(gltf.nodes)
     offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, image_indices, offset, blob, dme_name)
     #node_end = len(gltf.nodes)
@@ -103,17 +104,19 @@ manager: AssetManager = None
 pool: multiprocessing.pool.Pool = None
 
 
-def get_manager(pool: multiprocessing.pool.Pool) -> AssetManager:
+def get_manager(pool: multiprocessing.pool.Pool, live: bool = False) -> AssetManager:
     global manager
     if manager is not None:
         return manager
     test_server = Path(r"/mnt/e/Users/Public/Daybreak Game Company/Installed Games/PlanetSide 2 Test/Resources/Assets")
-    if not test_server.exists():
-        logger.error(f"Test server installation not found at expected location! Please update path in {__file__} to extract textures automatically!")
-        raise FileNotFoundError(str(test_server))
+    live_server = Path(r"/mnt/c/Users/Public/Daybreak Game Company/Installed Games/PlanetSide 2/Resources/Assets")
+    server = test_server if not live else live_server
+    if not server.exists():
+        logger.error(f"Installation not found at expected location! Please update path in {__file__} to extract textures automatically!")
+        raise FileNotFoundError(str(server))
     else:
         logger.info("Loading game assets asynchronously...")
-        manager = AssetManager([Path(p) for p in glob(str(test_server) + "/assets_x64_*.pack2")], p = pool)
+        manager = AssetManager([Path(p) for p in glob(str(server) + "/assets_x64_*.pack2")], p = pool)
         logger.info(f"Manager created, assets loaded: {manager.loaded.is_set()}")
     return manager
 
@@ -160,9 +163,9 @@ def main():
         elif args.format == "stl":
             to_stl(dme, str(tmp_output_path))
         elif args.format == "glb":
-            to_glb(dme, str(tmp_output_path), manager)
+            to_glb(dme, str(tmp_output_path), manager, Path(args.input_file).name)
         elif args.format == "gltf":
-            to_gltf(dme, str(tmp_output_path), manager)
+            to_gltf(dme, str(tmp_output_path), manager, Path(args.input_file).name)
 
         os.replace(tmp_output_path, output_path)
     except FileNotFoundError:
