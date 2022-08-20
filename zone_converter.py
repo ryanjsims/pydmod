@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 from dataclasses import astuple
-import math
 from DbgPack import AssetManager
 from io import BytesIO
 from glob import glob
@@ -14,7 +13,7 @@ import multiprocessing
 import multiprocessing.pool
 
 from adr_converter import dme_from_adr
-from cnk_loader import ForgelightChunk
+from cnk_loader import ForgelightChunk, CNK1
 from dme_converter import append_dme_to_gltf, save_textures
 from gltf_helpers import add_chunk_to_gltf
 from zone_loader import Zone
@@ -29,43 +28,105 @@ handler.setFormatter(logging.Formatter(
 
 manager = None
 
-def get_manager(pool: multiprocessing.pool.Pool) -> AssetManager:
+def get_manager(pool: multiprocessing.pool.Pool, live: bool = False) -> AssetManager:
     global manager
     if manager is not None:
         return manager
     test_server = Path(r"/mnt/e/Users/Public/Daybreak Game Company/Installed Games/PlanetSide 2 Test/Resources/Assets")
-    if not test_server.exists():
+    live_server = Path(r"/mnt/c/Users/Public/Daybreak Game Company/Installed Games/PlanetSide 2/Resources/Assets")
+    server = test_server if not live else live_server
+    if not server.exists():
         logger.error(f"Test server installation not found at expected location! Please update path in {__file__} to extract textures automatically!")
-        raise FileNotFoundError(str(test_server))
+        raise FileNotFoundError(str(server))
     else:
         logger.info("Loading game assets asynchronously...")
         manager = AssetManager(
-            [Path(p) for p in glob(str(test_server) + "/assets_x64_*.pack2")]
-            # + [Path(p) for p in glob(str(test_server) + "/Amerish_x64_*.pack2")]
-            + [Path(p) for p in glob(str(test_server) + "/Cleanroom_x64_*.pack2")]
-            # + [Path(p) for p in glob(str(test_server) + "/Esamir_x64_*.pack2")]
-            # + [Path(p) for p in glob(str(test_server) + "/Hossin_x64_*.pack2")]
-            # + [Path(p) for p in glob(str(test_server) + "/Indar_x64_*.pack2")]
-            + [Path(p) for p in glob(str(test_server) + "/Nexus_x64_*.pack2")]
-            + [Path(p) for p in glob(str(test_server) + "/Oshur_x64_*.pack2")]
-            + [Path(p) for p in glob(str(test_server) + "/quickload_x64_*.pack2")]
-            # + [Path(p) for p in glob(str(test_server) + "/Sanctuary_x64_*.pack2")]
-            + [Path(p) for p in glob(str(test_server) + "/VR_x64_*.pack2")],
+            [Path(p) for p in glob(str(server) + "/assets_x64_*.pack2")]
+            # + [Path(p) for p in glob(str(server) + "/Amerish_x64_*.pack2")]
+            + [Path(p) for p in glob(str(server) + "/Cleanroom_x64_*.pack2")]
+            # + [Path(p) for p in glob(str(server) + "/Esamir_x64_*.pack2")]
+            # + [Path(p) for p in glob(str(server) + "/Hossin_x64_*.pack2")]
+            # + [Path(p) for p in glob(str(server) + "/Indar_x64_*.pack2")]
+            + [Path(p) for p in glob(str(server) + "/Nexus_x64_*.pack2")]
+            + [Path(p) for p in glob(str(server) + "/Oshur_x64_*.pack2")]
+            + [Path(p) for p in glob(str(server) + "/quickload_x64_*.pack2")]
+            # + [Path(p) for p in glob(str(server) + "/Sanctuary_x64_*.pack2")]
+            + [Path(p) for p in glob(str(server) + "/VR_x64_*.pack2")],
             p = pool
         )
         logger.info(f"Manager created, assets loaded: {manager.loaded.is_set()}")
     return manager
 
 
+def save_chunk_textures(gltf: GLTF2, chunk_lod: CNK1, input_file: str, output_file: str, x: int, y: int, sampler: int, skip_textures: bool = False) -> int:
+    color = chunk_lod.color()
+    specular = chunk_lod.specular()
+    normal = chunk_lod.normal()
+
+    base_dir = Path(output_file).parent / "textures" / "chunks"
+    base_dir.mkdir(exist_ok=True, parents=True)
+    rel_dir = Path("textures") / "chunks"
+    color_name = str(rel_dir / f"{Path(input_file).stem}_{x}_{y}_C.png")
+    color_info = TextureInfo(index=len(gltf.textures))
+    gltf.textures.append(Texture(
+        name=color_name,
+        source=len(gltf.images),
+        sampler=sampler
+    ))
+    gltf.images.append(Image(uri=color_name))
+
+    spec_name = str(rel_dir / f"{Path(input_file).stem}_{x}_{y}_S.png")
+    spec_info = TextureInfo(index=len(gltf.textures))
+    gltf.textures.append(Texture(
+        name=spec_name,
+        source=len(gltf.images),
+        sampler=sampler
+    ))
+    gltf.images.append(Image(uri=spec_name))
+
+    norm_name = str(rel_dir / f"{Path(input_file).stem}_{x}_{y}_N.png")
+    norm_info = TextureInfo(index=len(gltf.textures))
+    gltf.textures.append(Texture(
+        name=norm_name,
+        source=len(gltf.images),
+        sampler=sampler
+    ))
+    gltf.images.append(Image(uri=norm_name))
+
+    index = len(gltf.materials)
+
+    gltf.materials.append(Material(
+        extensions={
+            "KHR_materials_specular": {
+                "specularTexture": spec_info
+            }
+        },
+        name=f"{Path(input_file).stem}_{x}_{y}",
+        pbrMetallicRoughness=PbrMetallicRoughness(
+            baseColorTexture=color_info,
+            metallicRoughnessTexture=spec_info
+        ),
+        normalTexture=norm_info,
+    ))
+
+    if not skip_textures:
+        color.save(Path(output_file).parent / color_name)
+        specular.save(Path(output_file).parent / spec_name)
+        normal.save(Path(output_file).parent / norm_name)
+
+    return index
+
+
 def main():
     parser = ArgumentParser(description="A utility to convert Zone files to GLTF2 files")
-    parser.add_argument("input_file", type=str, help="Path of the input Zone file")
+    parser.add_argument("input_file", type=str, help="Path of the input Zone file, either already extracted or from game assets")
     parser.add_argument("output_file", type=str, help="Path of the output file")
     parser.add_argument("--format", "-f", choices=["gltf", "glb"], help="The output format to use, required for conversion")
     parser.add_argument("--verbose", "-v", help="Increase log level, can be specified multiple times", action="count", default=0)
     parser.add_argument("--skip-textures", "-s", help="Skips saving textures", action="store_true")
     parser.add_argument("--terrain-enabled", "-t", help="Load terrain chunks as models into the result", action="store_true")
     parser.add_argument("--actors-enabled", "-a", help="Loads static actor files as models (buildings, trees, etc)", action="store_true")
+    parser.add_argument("--live", "-l", help="Loads live assets rather than test", action="store_true")
     args = parser.parse_args()
 
     if not (args.terrain_enabled or args.actors_enabled):
@@ -74,7 +135,7 @@ def main():
     logging.basicConfig(level=max(logging.WARNING - 10 * args.verbose, logging.DEBUG), handlers=[handler])
 
     with multiprocessing.Pool(8) as pool:
-        manager = get_manager(pool)
+        manager = get_manager(pool, args.live)
         try:
             with open(args.input_file, "rb") as file:
                 zone = Zone.load(file)
@@ -103,13 +164,25 @@ def main():
     actor_parent = None
 
     if args.terrain_enabled:
+        # Create a sampler for the terrain to use that clamps the textures to the edge, avoiding obvious lines between chunks
+        sampler = len(gltf.samplers)
+        gltf.samplers.append(Sampler(
+            wrapS=CLAMP_TO_EDGE,
+            wrapT=CLAMP_TO_EDGE
+        ))
         for x in range(zone.header.start_x, zone.header.start_x + zone.header.chunks_x, 4):
             for y in range(zone.header.start_y, zone.header.start_y + zone.header.chunks_y, 4):
                 chunk_name = f"{Path(args.input_file).stem}_{x}_{y}.cnk0"
+                chunk_texture_name = f"{Path(args.input_file).stem}_{x}_{y}.cnk1"
                 logger.info(f" - {chunk_name} - ")
                 chunk = ForgelightChunk.load(BytesIO(manager.get_raw(chunk_name).get_data()))
+                chunk_lod = ForgelightChunk.load(BytesIO(manager.get_raw(chunk_texture_name).get_data()))
+                
+                assert type(chunk_lod) == CNK1
+                material = save_chunk_textures(gltf, chunk_lod, args.input_file, args.output_file, x, y, sampler, args.skip_textures)
+
                 node_start = len(gltf.nodes)
-                offset, blob = add_chunk_to_gltf(gltf, chunk, offset, blob)
+                offset, blob = add_chunk_to_gltf(gltf, chunk, material, offset, blob)
                 chunk_nodes.append(len(gltf.nodes))
                 gltf.nodes.append(Node(
                     name=Path(chunk_name).stem, 
