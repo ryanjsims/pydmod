@@ -1,6 +1,7 @@
 from distutils.core import setup, Extension
 from glob import glob
 from pathlib import Path
+from sys import platform
 
 lzham_alpha8_dir = Path("lzham/lzham_alpha8/")
 
@@ -12,7 +13,7 @@ ext_sources = [
     lzham_alpha8_dir / 'lzhamcomp/lzham_lzcomp_state.cpp',
     lzham_alpha8_dir / 'lzhamcomp/lzham_lzcomp.cpp',
     lzham_alpha8_dir / 'lzhamcomp/lzham_match_accel.cpp',
-    "lzham/lzham_codec/lzhamcomp/lzham_pthreads_threading.cpp",
+    "lzham/lzham_codec/lzhamcomp/lzham_pthreads_threading.cpp" if platform != "win32" else "lzham/lzham_codec/lzhamcomp/lzham_win32_threading.cpp",
     lzham_alpha8_dir / 'lzhamlib/lzham_lib.cpp',
 ]
 
