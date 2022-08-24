@@ -6,6 +6,15 @@ This software still has several issues. The actual hash function used for materi
 
 If you're finding this on github you probably know how to obtain DME models, if not there are several repositories dedicated to opening and saving game assets from .pack2 files.
 
+## Installation (Linux)
+
+1. After cloning the repository, run `git submodule update --init` to pull in all the needed submodules.
+2. Create a virtual environment for the repository and activate it with `python3 -m venv venv && . venv/bin/activate`
+    * Windows: You'll need to run `./venv/bin/Activate.ps1` if you use powershell
+3. Navigate to `./dbg-pack/` and run `pip install .`
+4. If you need terrain loading, navigate to `./cnk_loader/` and run `pip install .`
+    * Windows: check below for extra instructions
+
 ## Compiling `cnk_loader` from Windows
 
 1. Install Visual Studio with the Desktop development with C++ and Python development workloads (VS2019 used when testing)
@@ -17,6 +26,23 @@ If you're finding this on github you probably know how to obtain DME models, if 
 6. Run `pip install .` to install the library
 
 ## Usage
+```
+usage: adr_converter.py [-h] [--format {gltf,glb}] [--live] [--verbose]
+                        input_file output_file
+
+Actor Runtime (.adr) to gltf/glb converter
+
+positional arguments:
+  input_file            Path of the input ADR file
+  output_file           Path of the output file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --format {gltf,glb}, -f {gltf,glb}
+                        The output format to use, required for conversion
+  --live, -l            Load assets from live server rather than test
+  --verbose, -v         Increase log level, can be specified multiple times
+```
 
 ```
 usage: dme_converter.py [-h] [--output-file OUTPUT_FILE]
@@ -42,23 +68,5 @@ optional arguments:
                         mesh when loading the DME data
   --dump-textures, -t   Dump the filenames of the textures used by the model
                         to stdout and exit
-  --verbose, -v         Increase log level, can be specified multiple times
-```
-
-```
-usage: adr_converter.py [-h] [--format {gltf,glb}] [--live] [--verbose]
-                        input_file output_file
-
-Actor Runtime (.adr) to gltf/glb converter
-
-positional arguments:
-  input_file            Path of the input ADR file
-  output_file           Path of the output file
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --format {gltf,glb}, -f {gltf,glb}
-                        The output format to use, required for conversion
-  --live, -l            Load assets from live server rather than test
   --verbose, -v         Increase log level, can be specified multiple times
 ```
