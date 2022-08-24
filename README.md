@@ -6,6 +6,16 @@ This software still has several issues. The actual hash function used for materi
 
 If you're finding this on github you probably know how to obtain DME models, if not there are several repositories dedicated to opening and saving game assets from .pack2 files.
 
+## Compiling `cnk_loader` from Windows
+
+1. Install Visual Studio with the Desktop development with C++ and Python development workloads (VS2019 used when testing)
+    * Python native development tools should be enabled
+2. Under the start menu, navigate to the `Visual Studio` folder for your install
+3. Launch `x64 Native Tools Command Prompt for VS 2019`
+4. Clone the repository wherever you plan to use it, and navigate there in the Command Prompt
+5. Navigate to `./cnk_loader/`
+6. Run `pip install .` to install the library
+
 ## Usage
 
 ```
@@ -29,5 +39,3 @@ optional arguments:
   --embed-textures, -e  Embed the texture filenames used by the model in the output file, saving the textures alongside the output (GLTF/GLB only)
   --verbose, -v         Increase log level, can be specified multiple times
 ```
-
-## 
