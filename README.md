@@ -19,7 +19,11 @@ If you're finding this on github you probably know how to obtain DME models, if 
 ## Usage
 
 ```
-python dme_converter.py [-h] [--output-file OUTPUT_FILE] [--format {stl,gltf,obj,glb}] [--material-hashes MATERIAL_HASHES [MATERIAL_HASHES ...]] [--new-materials] [--dump-textures] [--embed-textures] [--verbose] input_file
+usage: dme_converter.py [-h] [--output-file OUTPUT_FILE]
+                        [--format {stl,gltf,obj,glb}]
+                        [--material-hashes MATERIAL_HASHES [MATERIAL_HASHES ...]]
+                        [--dump-textures] [--verbose]
+                        input_file
 
 DME v4 to GLTF/OBJ/STL converter
 
@@ -29,13 +33,32 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --output-file OUTPUT_FILE, -o OUTPUT_FILE
-                        Where to store the converted file. If not provided, will use the input filename and change the extension
+                        Where to store the converted file. If not provided,
+                        will use the input filename and change the extension
   --format {stl,gltf,obj,glb}, -f {stl,gltf,obj,glb}
                         The output format to use, required for conversion
   --material-hashes MATERIAL_HASHES [MATERIAL_HASHES ...], -m MATERIAL_HASHES [MATERIAL_HASHES ...]
-                        The name hash(es) of the materials to use for each mesh when loading the DME data
-  --new-materials, -n   Use a more recently generated materials.json file. Not super helpful yet since the hash function seems to be changed
-  --dump-textures, -t   Dump the filenames of the textures used by the model to stdout and exit
-  --embed-textures, -e  Embed the texture filenames used by the model in the output file, saving the textures alongside the output (GLTF/GLB only)
+                        The name hash(es) of the materials to use for each
+                        mesh when loading the DME data
+  --dump-textures, -t   Dump the filenames of the textures used by the model
+                        to stdout and exit
+  --verbose, -v         Increase log level, can be specified multiple times
+```
+
+```
+usage: adr_converter.py [-h] [--format {gltf,glb}] [--live] [--verbose]
+                        input_file output_file
+
+Actor Runtime (.adr) to gltf/glb converter
+
+positional arguments:
+  input_file            Path of the input ADR file
+  output_file           Path of the output file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --format {gltf,glb}, -f {gltf,glb}
+                        The output format to use, required for conversion
+  --live, -l            Load assets from live server rather than test
   --verbose, -v         Increase log level, can be specified multiple times
 ```
