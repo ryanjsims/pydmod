@@ -17,12 +17,14 @@ ext_sources = [
     lzham_alpha8_dir / 'lzhamlib/lzham_lib.cpp',
 ]
 
+extra_compile_args = ["-Wno-unused-value"] if platform != "win32" else ["/Wno-unused-value"]
+
 setup(
     name="pycnkdec",
     version="0.0.1",
     description="Python Forgelight CNK decompressor",
     ext_modules=[
-        Extension('cnkdec', list(map(str, ext_sources)), list(map(str, [lzham_alpha8_dir / "include", lzham_alpha8_dir / "lzhamdecomp", lzham_alpha8_dir / "lzhamcomp"])), extra_compile_args=["-Wno-unused-value"])
+        Extension('cnkdec', list(map(str, ext_sources)), list(map(str, [lzham_alpha8_dir / "include", lzham_alpha8_dir / "lzhamdecomp", lzham_alpha8_dir / "lzhamcomp"])), extra_compile_args=extra_compile_args)
     ],
     ext_package="cnkdec",
     package_dir={'': 'lzham'},
