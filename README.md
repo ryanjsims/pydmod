@@ -11,8 +11,9 @@ If you're finding this on github you probably know how to obtain DME models, if 
 1. After cloning the repository, run `git submodule update --init` to pull in all the needed submodules.
 2. Create a virtual environment for the repository and activate it with `python3 -m venv venv && . venv/bin/activate`
     * Windows: You'll need to run `./venv/bin/Activate.ps1` if you use powershell
-3. Navigate to `./dbg-pack/` and run `pip install .`
-4. If you need terrain loading, navigate to `./cnk_loader/` and run `pip install .`
+3. Run `pip install -r requirements.txt`
+4. Navigate to `./dbg-pack/` and run `pip install .`
+5. If you need terrain loading, navigate to `./cnk_loader/` and run `pip install .`
     * Windows: check below for extra instructions
 
 ## Compiling `cnk_loader` from Windows
