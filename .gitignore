@@ -12,3 +12,6 @@ dbg-pack*
 venv
 build
 .vscode
+.vs/
+env/
+pycnkdec.egg-info/

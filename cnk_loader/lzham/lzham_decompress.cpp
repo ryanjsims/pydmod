@@ -1,12 +1,16 @@
 #include <Python.h>
 
 #define LZHAM_DEFINE_ZLIB_API
+#ifdef _MSC_VER
+#define uint unsigned int
+#endif
 #include "lzham.h"
 
 #include <cstring>
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+
 
 #define BUF_SIZE (1024u*1024u)
 
