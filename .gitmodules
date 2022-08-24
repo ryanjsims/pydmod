@@ -4,3 +4,6 @@
 [submodule "cnk_loader/lzham/lzham_alpha8"]
 	path = cnk_loader/lzham/lzham_alpha8
 	url = https://github.com/psemu/cnkdec
+[submodule "dbg-pack"]
+	path = dbg-pack
+	url = https://github.com/ryanjsims/dbg-pack

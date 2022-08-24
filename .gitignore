@@ -8,7 +8,7 @@ models
 *.exe*
 *.cnk*
 *.c
-dbg-pack*
+dbg-pack-master
 venv
 build
 .vscode
