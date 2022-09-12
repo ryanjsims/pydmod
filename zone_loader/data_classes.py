@@ -1,3 +1,4 @@
+from enum import IntEnum
 import struct
 import logging
 from dataclasses import dataclass
@@ -29,7 +30,7 @@ class Float4:
     w: float
 
     @classmethod
-    def load(cls, data: BytesIO) -> 'Color':
+    def load(cls, data: BytesIO) -> 'Float4':
         values = struct.unpack("<ffff", data.read(16))
         return cls(*values)
 
@@ -367,6 +368,13 @@ class Instance:
             unk_data2 = data.read(5)
             unk_byte = None
             unk_byte2 = None
+        elif version == 2:
+            unk_data = None
+            uint_pairs = None
+            float_pairs = None
+            vector4_pairs = None
+            unk_data2 = None
+            unk_int, unk_byte, unk_byte2, unk_float = struct.unpack("<IBBf", data.read(10))
         else:
             unk_data = None
             uint_pairs = None
@@ -418,18 +426,28 @@ class RuntimeObjects:
     def __getitem__(self, index):
         return self.runtime_objects[index]
 
+class LightType(IntEnum):
+    Point = 1
+    Spot = 2
+
 @dataclass
 class Light:
     name: str
     color: str
+    type: LightType
+    unknown_bool: bool
+    translation: Float4
     unk_chunk: bytes
 
     @classmethod
     def load(cls, data: BytesIO) -> 'Light':
         name = read_cstr(data)
         color = read_cstr(data)
-        unk_chunk = data.read(75)
-        return cls(name, color, unk_chunk)
+        type = LightType(struct.unpack("<I", data.read(4))[0])
+        unknown_bool = struct.unpack("<B", data.read(1))[0]
+        translation = Float4.load(data)
+        unk_chunk = data.read(54)
+        return cls(name, color, type, unknown_bool, translation, unk_chunk)
 
 @dataclass
 class Lights:
