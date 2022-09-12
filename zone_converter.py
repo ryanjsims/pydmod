@@ -137,11 +137,7 @@ def main():
     with multiprocessing.Pool(8) as pool:
         manager = get_manager(pool, args.live)
         try:
-            with open(args.input_file, "rb") as file:
-                zone = Zone.load(file)
-            if not manager.loaded.is_set():
-                logger.info("Waiting for assets to load...")
-            manager.loaded.wait()
+            file = open(args.input_file, "rb")
         except FileNotFoundError:
             logger.warning(f"File not found: {args.input_file}. Loading from game assets...")
             if not manager.loaded.is_set():
@@ -151,8 +147,13 @@ def main():
             if zone_asset is None:
                 logger.error(f"{args.input_file} not found in game assets!")
                 return -1
-            zone = Zone.load(BytesIO(zone_asset.get_data()))
+            file = BytesIO(zone_asset.get_data())
+    if not manager.loaded.is_set():
+        logger.info("Waiting for assets to load...")
+    manager.loaded.wait()
     
+    zone = Zone.load(file)
+
     gltf = GLTF2()
     mats: Dict[int, Material] = {}
     textures: Dict[str, PILImage.Image] = {}
