@@ -3,6 +3,8 @@ import numpy
 import os
 import re
 
+from re import RegexFlag
+
 from cnk_loader import CNK0
 from dme_loader import DME, Mesh as DMEMesh, jenkins
 from DbgPack import AssetManager
@@ -12,8 +14,7 @@ from pygltflib import *
 
 logger = logging.getLogger("GLTF Helpers")
 
-TEXTURE_PER_MATERIAL = 4
-EMISSIVE_STRENGTH = 1
+EMISSIVE_STRENGTH = 5
 SUFFIX_TO_TYPE = {
     "_C.png": "base",
     "_MR.png": "met",
@@ -26,18 +27,22 @@ texture_name_to_indices = {}
 def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[int, List[int]], textures: Dict[str, PILImage.Image], image_indices: Dict[str, int], offset: int, blob: bytes, dme_name: str) -> Tuple[int, bytes]:
     global texture_name_to_indices
     texture_groups_dict = {}
+    atlas_set = set()
     for texture in dme.dmat.textures:
-        match = re.match("(.*)_(C|c|N|n|S|s).dds", texture)
-        if not match:
+        group_match = re.match("(.*)_(C|c|N|n|S|s)\.dds", texture)
+        atlas_match = re.match(".*atlas.*\.dds", texture, flags=RegexFlag.IGNORECASE)
+        if not group_match and atlas_match and texture not in atlas_set:
+            atlas_set.add(texture)
+        if not group_match:
             continue
-        if match.group(1) not in texture_groups_dict:
-            texture_groups_dict[match.group(1)] = 0
-        texture_groups_dict[match.group(1)] += 1
+        if group_match.group(1) not in texture_groups_dict:
+            texture_groups_dict[group_match.group(1)] = 0
+        texture_groups_dict[group_match.group(1)] += 1
     
     texture_groups = [name for name, _ in sorted(list(texture_groups_dict.items()), key=lambda pair: pair[1], reverse=True)]
 
-
     logger.info(f"Texture groups: {texture_groups}")
+    logger.info(f"Atlas textures: {list(atlas_set)}")
     
     mat_info = []
     for name in texture_groups:
@@ -68,6 +73,20 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
             ))
         mat_info.append(mat_info_entry)
     
+    atlas_texture = None
+    for atlas in atlas_set:
+        if str(Path(atlas).with_suffix(".png")) in texture_name_to_indices:
+            atlas_texture = texture_name_to_indices[str(Path(atlas).with_suffix(".png"))]
+            continue
+        load_texture(manager, gltf, textures, atlas, image_indices)
+        texture_name_to_indices[str(Path(atlas).with_suffix(".png"))] = len(gltf.textures)
+        gltf.textures.append(Texture(
+            name=str(Path(atlas).with_suffix(".png")),
+            source=image_indices[str(Path(atlas).with_suffix(".png"))]
+        ))
+        atlas_texture = texture_name_to_indices[str(Path(atlas).with_suffix(".png"))]
+
+    
     mesh_materials = []
     assert len(dme.meshes) == len(dme.dmat.materials), "Mesh count != material count"
 
@@ -77,16 +96,24 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
 
         if i < len(mat_info):
             mat_textures: Dict[str, Optional[TextureInfo]] = mat_info[i]
+        elif material.name() == 'BumpRigidHologram2SidedBlend':
+            mat_textures: Dict[str, Optional[TextureInfo]] = {"base": None, "met": None, "norm": None, "emis": TextureInfo(index=atlas_texture)}
         else:
             mat_textures: Dict[str, Optional[TextureInfo]] = {"base": None, "met": None, "norm": None, "emis": None}
+        
         
         # look for existing material that uses same textures
         for mat_index in mats[material.namehash]:
             logger.debug(f"gltf.materials[{mat_index}] == {gltf.materials[mat_index]}")
             logger.debug(f"mat_textures == {mat_textures}")
             baseColorTexture = gltf.materials[mat_index].pbrMetallicRoughness.baseColorTexture
+            emissiveTexture = gltf.materials[mat_index].emissiveTexture
             if baseColorTexture is not None and mat_textures["base"] is not None and baseColorTexture.index == mat_textures["base"].index:
                 logger.info("Found existing material with same base texture")
+                mesh_materials.append(mat_index)
+                break
+            elif emissiveTexture is not None and mat_textures["emis"] is not None and emissiveTexture.index == mat_textures["emis"].index:
+                logger.info("Found existing material with same emissive texture")
                 mesh_materials.append(mat_index)
                 break
             elif baseColorTexture is None and mat_textures["base"] is None:
@@ -107,12 +134,14 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
             name=material.name(),
             pbrMetallicRoughness = PbrMetallicRoughness(
                 baseColorTexture=mat_textures["base"],
-                metallicRoughnessTexture=mat_textures["met"]
+                metallicRoughnessTexture=mat_textures["met"],
+                baseColorFactor=[1, 1, 1, 1] if mat_textures["base"] is not None else [0, 0, 0, 1]
             ),
             normalTexture=mat_textures["norm"],
             emissiveTexture=mat_textures["emis"],
             emissiveFactor=[EMISSIVE_STRENGTH if mat_textures["emis"] is not None else 0] * 3,
-            alphaCutoff=None
+            alphaCutoff=None,
+            alphaMode=OPAQUE if material.name() != "Foliage" else BLEND
         )
         gltf.materials.append(new_mat)
 
@@ -132,9 +161,13 @@ def unpack_specular(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILI
     albedoName = name[:-5] + "C.dds" if name[-5] == "S" else "c.dds"
     albedoAsset = manager.get_raw(albedoName)
     if albedoAsset is not None:
-        albedo = PILImage.open(BytesIO(albedoAsset.get_data())).convert(mode="RGB")
-        emissive = ImageChops.multiply(im.getchannel("B").convert(mode="RGB"), albedo)
+        albedo = PILImage.open(BytesIO(albedoAsset.get_data()))
+        albedoRGB = albedo.convert(mode="RGB")
+        constant = PILImage.new(mode="RGB", size=albedo.size)
+        mask = ImageChops.multiply(PILImage.eval(im.getchannel("B").resize(constant.size), lambda x: 255 if x > 50 else 0), albedo.getchannel("A"))
+        emissive = PILImage.composite(albedoRGB, constant, mask)
         albedo.close()
+        constant.close()
     else:
         emissive = im.getchannel("B").convert(mode="RGB")
     ename = name[:-5] + "E.png"
@@ -397,6 +430,7 @@ def load_texture(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImag
         name = str(Path(name).with_suffix(".png"))
         textures[name] = im
     else:
+        texture_indices[str(Path(name).with_suffix(".png"))] = len(gltf.images)
         name = str(Path(name).with_suffix(".png"))
         textures[name] = im
     gltf.images.append(Image(uri="textures" + os.sep + name))
