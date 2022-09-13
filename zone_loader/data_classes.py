@@ -3,7 +3,7 @@ import struct
 import logging
 from dataclasses import dataclass
 from io import BytesIO
-from typing import List
+from typing import List, Tuple
 
 logger = logging.getLogger("zone_loader")
 
@@ -15,12 +15,18 @@ class Color:
     a: int
 
     @classmethod
-    def load(cls, data: BytesIO) -> 'Color':
+    def load(cls, data: BytesIO, argb: bool = False) -> 'Color':
         values = struct.unpack("<BBBB", data.read(4))
-        return cls(*values)
+        if not argb:
+            return cls(*values)
+        else:
+            return cls(values[1], values[2], values[3], values[0])
 
-    def serialize(self) -> bytes:
-        return struct.pack("<cccc", self.r, self.g, self.b, self.a)
+    def serialize(self, argb: bool = False) -> bytes:
+        if not argb:
+            return struct.pack("<cccc", self.r, self.g, self.b, self.a)
+        else:
+            return struct.pack("<cccc", self.a, self.r, self.g, self.b)
 
 @dataclass
 class Float4:
@@ -433,21 +439,27 @@ class LightType(IntEnum):
 @dataclass
 class Light:
     name: str
-    color: str
+    color_name: str
     type: LightType
     unknown_bool: bool
     translation: Float4
+    rotation: Float4
+    unk_floats: Tuple[float, float]
+    color_val: Color
     unk_chunk: bytes
 
     @classmethod
     def load(cls, data: BytesIO) -> 'Light':
         name = read_cstr(data)
-        color = read_cstr(data)
+        color_name = read_cstr(data)
         type = LightType(struct.unpack("<I", data.read(4))[0])
         unknown_bool = struct.unpack("<B", data.read(1))[0]
         translation = Float4.load(data)
-        unk_chunk = data.read(54)
-        return cls(name, color, type, unknown_bool, translation, unk_chunk)
+        rotation = Float4.load(data)
+        unk_floats = struct.unpack("<ff", data.read(8))
+        color_val = Color.load(data, argb=True)
+        unk_chunk = data.read(26)
+        return cls(name, color_name, type, unknown_bool, translation, rotation, unk_floats, color_val, unk_chunk)
 
 @dataclass
 class Lights:

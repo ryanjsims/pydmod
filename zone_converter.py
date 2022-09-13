@@ -17,6 +17,7 @@ from cnk_loader import ForgelightChunk, CNK1
 from dme_converter import append_dme_to_gltf, save_textures
 from gltf_helpers import add_chunk_to_gltf
 from zone_loader import Zone
+from zone_loader.data_classes import LightType
 
 logger = logging.getLogger("Zone Converter")
 
@@ -47,7 +48,7 @@ def get_manager(pool: multiprocessing.pool.Pool, live: bool = False) -> AssetMan
             # + [Path(p) for p in glob(str(server) + "/Esamir_x64_*.pack2")]
             # + [Path(p) for p in glob(str(server) + "/Hossin_x64_*.pack2")]
             # + [Path(p) for p in glob(str(server) + "/Indar_x64_*.pack2")]
-            + [Path(p) for p in glob(str(server) + "/Nexus_x64_*.pack2")]
+            + [Path(p) for p in glob(str(server) + "/nexus_x64_*.pack2")]
             + [Path(p) for p in glob(str(server) + "/Oshur_x64_*.pack2")]
             + [Path(p) for p in glob(str(server) + "/quickload_x64_*.pack2")]
             # + [Path(p) for p in glob(str(server) + "/Sanctuary_x64_*.pack2")]
@@ -107,6 +108,7 @@ def save_chunk_textures(gltf: GLTF2, chunk_lod: CNK1, input_file: str, output_fi
             metallicRoughnessTexture=spec_info
         ),
         normalTexture=norm_info,
+        alphaCutoff=None
     ))
 
     if not skip_textures:
@@ -117,6 +119,16 @@ def save_chunk_textures(gltf: GLTF2, chunk_lod: CNK1, input_file: str, output_fi
     return index
 
 
+def get_gltf_rotation(rotation: Tuple[float, float, float]):
+    r = Rotation.from_euler("yzx", rotation, False)
+    rot = list(r.as_quat())        
+    rot[1] *= -1
+    rot[3] *= -1
+    temp = rot[0] * -1
+    rot[0] = rot[2] * -1
+    rot[2] = temp
+    return rot
+
 def main():
     parser = ArgumentParser(description="A utility to convert Zone files to GLTF2 files")
     parser.add_argument("input_file", type=str, help="Path of the input Zone file, either already extracted or from game assets")
@@ -126,11 +138,12 @@ def main():
     parser.add_argument("--skip-textures", "-s", help="Skips saving textures", action="store_true")
     parser.add_argument("--terrain-enabled", "-t", help="Load terrain chunks as models into the result", action="store_true")
     parser.add_argument("--actors-enabled", "-a", help="Loads static actor files as models (buildings, trees, etc)", action="store_true")
+    parser.add_argument("--lights-enabled", "-i", help="Adds lights to the output file", action="store_true")
     parser.add_argument("--live", "-l", help="Loads live assets rather than test", action="store_true")
     args = parser.parse_args()
 
-    if not (args.terrain_enabled or args.actors_enabled):
-        parser.error("No model loading enabled! Use either/both -a and -t to load models")
+    if not (args.terrain_enabled or args.actors_enabled or args.lights_enabled):
+        parser.error("No model/light loading enabled! Use either/all of -a, -t, or -i to load models and/or lights")
 
     logging.basicConfig(level=max(logging.WARNING - 10 * args.verbose, logging.DEBUG), handlers=[handler])
 
@@ -163,9 +176,11 @@ def main():
     chunk_nodes = []
     terrain_parent = None
     actor_parent = None
+    light_parent = None
 
     if args.terrain_enabled:
         # Create a sampler for the terrain to use that clamps the textures to the edge, avoiding obvious lines between chunks
+        gltf.extensionsUsed.append("KHR_materials_specular")
         sampler = len(gltf.samplers)
         gltf.samplers.append(Sampler(
             wrapS=CLAMP_TO_EDGE,
@@ -216,18 +231,7 @@ def main():
                         gltf.nodes.append(Node(mesh=gltf.nodes[i].mesh))
                 else:
                     children = list(range(node_start, node_end))
-                #constrain_rad = lambda x: x - math.ceil(x / math.pi - 0.5) * math.pi
-                #rotx, roty, rotz = (instance.rotation.y, instance.rotation.x, instance.rotation.z)
-                r = Rotation.from_euler("yzx", astuple(instance.rotation)[:3], False)
-                rot = list(r.as_quat())
-                #print(rot)
-                    
-                rot[1] *= -1
-                rot[3] *= -1
-                temp = rot[0] * -1
-                rot[0] = rot[2] * -1
-                rot[2] = temp
-                #print(rot)
+                rot = get_gltf_rotation(astuple(instance.rotation)[:3])
                 instances.append(len(gltf.nodes))
                 gltf.nodes.append(Node(
                     name=Path(object.actor_file).stem,
@@ -241,6 +245,45 @@ def main():
         actor_parent = len(gltf.nodes)
         gltf.nodes.append(Node(name="Object Instances", children=instance_nodes))
     
+    if args.lights_enabled:
+
+        gltf.extensionsUsed.append("KHR_lights_punctual")
+        gltf.extensions["KHR_lights_punctual"] = {
+            "lights": []
+        }
+        light_nodes = []
+        light_def_to_index = {}
+        logger.info(f"Adding {len(zone.lights)} lights to the scene...")
+        for light in zone.lights:
+            light_nodes.append(len(gltf.nodes))
+            light_def = {
+                "color": [light.color_val.r / 255.0, light.color_val.g / 255.0, light.color_val.b / 255.0],
+                "type": "point" if light.type == LightType.Point else "spot",
+                "intensity": light.unk_floats[0] * 100
+            }
+            if light.type == LightType.Spot:
+                light_def["spot"] = {}
+            key = str(light_def["color"]) + light_def["type"] + str(light_def["intensity"])
+            if key not in light_def_to_index:
+                light_def_to_index[key] = len(gltf.extensions["KHR_lights_punctual"]["lights"])
+                gltf.extensions["KHR_lights_punctual"]["lights"].append(light_def)
+
+            gltf.nodes.append(Node(
+                name=light.name, 
+                translation=astuple(light.translation)[:3],
+                rotation=get_gltf_rotation(astuple(light.rotation)[:3]),
+                scale=[1, 1, -1],
+                extensions={
+                    "KHR_lights_punctual": {
+                        "light": light_def_to_index[key]
+                    }
+                }
+            ))
+        logger.info(f"Added {len(light_nodes)} instances of {len(light_def_to_index)} unique lights")
+        light_parent = len(gltf.nodes)
+        gltf.nodes.append(Node(name="Lights", children=light_nodes))
+        
+    
     gltf.buffers.append(Buffer(
         byteLength=offset
     ))
@@ -250,6 +293,8 @@ def main():
         scene_nodes.append(terrain_parent)
     if actor_parent:
         scene_nodes.append(actor_parent)
+    if light_parent:
+        scene_nodes.append(light_parent)
     gltf.scene = 0
     gltf.scenes.append(Scene(nodes=scene_nodes))
 
