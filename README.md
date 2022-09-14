@@ -1,10 +1,10 @@
 # Forgelight DME model converter
 
-This repo contains several scripts that allow the conversion of forgelight DME models to STL, GLTF, or OBJ models for use in model viewing and rendering programs, as well as a python library that allows parsing of DME models which powers the conversion script. I made this to convert models to .glb format for import into Blender. 
+This repo contains several scripts that allow the conversion of forgelight DME/ADR/Zone models to STL, GLTF, or OBJ models for use in model viewing and rendering programs, as well as a python library that allows parsing of DME models which powers the conversion script. I made this to convert models to .glb format for import into Blender. 
 
-This software still has several issues. The actual hash function used for material names seems to have changed since the last time people did research on the DME format, so the script will default to loading the model using the PlayerStudio Vehicle material. If a different material is desired, you can provide specific name hashes on the commandline via the `-m` option. If the data strides listed in the DME file do not match the memory layout of the provided material, the tool will list materials that do match, and you may select the one to use depending on the mesh(es) being saved.
+This software still has several issues. Only the basic C/N/S texture maps are used in 95% of exports, with a few atlases added in specific cases for control consoles and computer screens. Detail maps are not used. If the data strides listed in the DME file do not match the memory layout of the provided material, the tool will list materials that do match, and you may select the one to use depending on the mesh(es) being saved.
 
-If you're finding this on github you probably know how to obtain DME models, if not there are several repositories dedicated to opening and saving game assets from .pack2 files.
+Zones can take a while to export due to their size, and then importing the resulting GLTF files will take time as well. Since LOD0 meshes are exported, memory requirements for even small continents (IE Nexus or VR) can be large in Blender.
 
 ## Installation (Linux)
 

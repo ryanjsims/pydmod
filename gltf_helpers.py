@@ -30,7 +30,7 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
     atlas_set = set()
     for texture in dme.dmat.textures:
         group_match = re.match("(.*)_(C|c|N|n|S|s)\.dds", texture)
-        atlas_match = re.match(".*atlas.*\.dds", texture, flags=RegexFlag.IGNORECASE)
+        atlas_match = re.match(".*(atlas|CommandControlTerminal).*\.dds", texture, flags=RegexFlag.IGNORECASE)
         if not group_match and atlas_match and texture not in atlas_set:
             atlas_set.add(texture)
         if not group_match:
