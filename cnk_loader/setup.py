@@ -18,7 +18,7 @@ ext_sources = [
 ]
 
 extra_compile_args = ["-Wno-unused-value"] if platform != "win32" else []
-macros = [] if platform != "win32" else [("WIN32", "1")]
+macros = [] if platform != "win32" else [("WIN32", "1"), ("_WIN64", "1")]
 setup(
     name="pycnkdec",
     version="0.0.1",
@@ -34,5 +34,5 @@ setup(
     ],
     ext_package="cnkdec",
     package_dir={'': 'lzham'},
-    packages=['', 'cnkdec']
+    packages=['cnkdec']
 )

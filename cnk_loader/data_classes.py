@@ -338,6 +338,7 @@ class ForgelightChunk:
         decompressed_data = decompressor.decompress(compressed_data, decompressed_size)
         if len(decompressed_data) != decompressed_size:
             logger.warning("Decompressed data length different from listed size!")
+        logger.debug(f"Decompressed successfully!")
         return BytesIO(header.serialize() + decompressed_data)
 
     @classmethod

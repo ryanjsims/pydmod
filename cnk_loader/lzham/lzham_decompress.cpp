@@ -1,3 +1,4 @@
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
 #define LZHAM_DEFINE_ZLIB_API
@@ -78,10 +79,16 @@ static PyObject* pylzham_decompress(PyObject* self, PyObject* args, PyObject* kw
     uint index = 0;
     uint output_index = 0;
 
-    uint8_t s_inbuf[BUF_SIZE];
-    uint8_t s_outbuf[BUF_SIZE];
+    uint8_t *s_inbuf = (uint8_t*)malloc(BUF_SIZE);
+    if(!s_inbuf) {
+        return lzham_exception("Could not allocate inflate input buffer");
+    }
+    uint8_t *s_outbuf = (uint8_t*)malloc(BUF_SIZE);
+    if(!s_outbuf) {
+        return lzham_exception("Could not allocate inflate output buffer");
+    }
 
-    memset(pStream, 0, sizeof(pStream));
+    memset(pStream, 0, sizeof(z_stream));
     pStream->next_in = s_inbuf;
     pStream->avail_in = 0;
     pStream->next_out = s_outbuf;
@@ -90,7 +97,7 @@ static PyObject* pylzham_decompress(PyObject* self, PyObject* args, PyObject* kw
     if (inflateInit2(pStream, window_bits)) {
         return lzham_exception("inflateInit2() failed");
     }
-
+    
     while(1) {
         int status;
         if(!pStream->avail_in) {
