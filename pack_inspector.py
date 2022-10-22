@@ -1,26 +1,30 @@
+import csv
 from datetime import datetime
+from threading import Thread
 import glfw
 import OpenGL.GL as gl
 from OpenGLContext.texture import Texture
 
 from io import BytesIO
 import logging
-from typing import Union
+from typing import Dict, List, Tuple, Union
 import dearpygui.dearpygui as dpg
 from pathlib import Path
 from glob import glob
-from multiprocessing import Pool
+from multiprocessing import Event, Pool
 from export_manager import ExportManager
 from DbgPack import Asset2, Pack1, Pack2
 from functools import cmp_to_key
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from PIL.Image import Transpose
 import magic
 import imgui
 import numpy
 from imgui.integrations.glfw import GlfwRenderer
+from imgui_extensions import FilePicker
 from dme_loader import DME
 from dme_loader.data_classes import input_layout_formats
+from adr_converter import dme_from_adr, to_glb, to_gltf
 import re
 
 logger = logging.getLogger("Pack Inspector")
@@ -55,7 +59,10 @@ def preview_item(asset: Asset2) -> Union[Image.Image, DME, str, None]:
     identifier = magic.from_buffer(asset.get_data())
     if "Microsoft DirectDraw Surface" or "PNG" in identifier:
         base = Image.new("RGBA", (800, 800))
-        img = Image.open(BytesIO(asset.get_data()))
+        try:
+            img = Image.open(BytesIO(asset.get_data()))
+        except UnidentifiedImageError:
+            return
         if img.size[0] > 800 or img.size[1] > 800:
             img.thumbnail((800, 800))
         base.paste(img, (int((base.size[0] - img.size[0]) / 2), int((base.size[1] - img.size[1]) / 2)))
@@ -86,6 +93,31 @@ def render_dme_to_texture(model: DME, framebuffer: int):
     gl.glViewport(0, 0, 800, 800)
     gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
 
+def update_namelist(namelist_path, manager: ExportManager) -> Thread:
+    def work():
+        with open(namelist_path) as namelist:
+            namelist_data = namelist.read().split()
+            for pack in manager.packs:
+                pack: Pack2
+                pack.namelist = namelist_data
+    return Thread(target=work)
+
+def export_selected(path: str, data: Tuple[ExportManager, str]) -> Thread:
+    def work():
+        manager = data[0]
+        to_export = data[1]
+        logger.info(f"Exporting {to_export} to {path}...")
+        if to_export.lower().endswith(".adr") and (path.lower().endswith(".glb") or path.lower().endswith(".gltf")):
+            dme = dme_from_adr(manager, to_export)
+            if path.lower().endswith(".glb"):
+                to_glb(dme, path, manager, dme.name)
+            elif path.lower().endswith(".gltf"):
+                to_gltf(dme, path, manager, dme.name)
+        else:
+            with open(path, "wb") as output:
+                output.write(manager[to_export].get_data())
+    return Thread(target=work)
+
 def main():
     logging.basicConfig(level=logging.INFO, handlers=[handler])
     manager = load_manager()
@@ -115,52 +147,129 @@ def main():
     gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
     # ###
 
+    name_filter = re.compile(".*", re.IGNORECASE)
+    matched_names: Dict[str, List[str]] = {}
+    file_picker = None
+    file_picker_callback = None
+    file_picker_thread = None
+    selected = None
     while not glfw.window_should_close(window):
         glfw.poll_events()
         impl.process_inputs()
 
         imgui.new_frame()
-        imgui.set_next_window_size(*imgui.get_io().display_size)
-        imgui.begin("", True, imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_RESIZE)
-        imgui.set_window_position(0, 0)
-        imgui.begin_child("Pack contents", 300, 0)
+        if imgui.begin_main_menu_bar():
+            if imgui.begin_menu("File", enabled=True):
+                clicked, visible = imgui.menu_item("Load namelist...")
+                if clicked:
+                    file_picker = FilePicker("Select namelist", user_data=manager)
+                    file_picker_callback = update_namelist
+                clicked, visible = imgui.menu_item("Export selected")
+                if clicked:
+                    file_picker_thread = export_selected(str(Path(".") / "export" / selected), (manager, selected))
+                    file_picker_thread.start()
+
+                clicked, visible = imgui.menu_item("Export selected as...")
+                if clicked:
+                    file_picker = FilePicker(f"Exporting {selected}...", user_data=(manager, selected))
+                    file_picker_callback = export_selected
+                imgui.end_menu()
+            imgui.end_main_menu_bar()
+        
+        imgui.set_next_window_size(imgui.get_io().display_size[0], imgui.get_io().display_size[1] - imgui.get_frame_height())
+        imgui.begin("Pack Inspector", True, imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_RESIZE)
+        imgui.set_window_position(0, imgui.get_frame_height())
+        imgui.begin_child("Controls", 0, 25)
+        imgui.text("Filter:")
+        imgui.same_line(spacing=10)
+        imgui.push_item_width(imgui.get_window_width() * 0.25)
+        changed, text_val = imgui.input_text("##filter", "", 64)
+        imgui.same_line(spacing=20)
+        imgui.text(f"Selected: {selected}")
+        imgui.end_child()
+        if changed and text_val == "":
+            name_filter = re.compile(".*", re.IGNORECASE)
+        elif changed:
+            try:
+                new_filter = re.compile(text_val, re.IGNORECASE)
+                name_filter = new_filter
+                matched_names = {}
+            except re.error:
+                pass
+
+        imgui.begin_child("Pack contents", int(0.3 * imgui.get_io().display_size[0]), 0)
         if not manager.loaded.is_set():
             imgui.text(f"Loading packs{'.' * (int(datetime.now().timestamp() * 10) % 4)}")
         else:
             for pack in sorted(manager.packs, key=cmp_to_key(pack_sort)):
                 expanded, visible = imgui.collapsing_header(pack.name)
-                if expanded:
+                if expanded and pack.name not in matched_names:
+                    matched_names[pack.name] = []
                     for asset in pack:
                         if asset.name == '':
                             continue
-                        imgui.text(asset.name)
+                        if not name_filter.match(asset.name):
+                            continue
+                        matched_names[pack.name].append(asset.name)
+                
+                if expanded and pack.name in matched_names:
+                    for name in matched_names[pack.name]:
+                        imgui.text(name)
                         if imgui.is_item_clicked():
-                            to_preview = preview_item(asset)
+                            selected = name
+                            to_preview = preview_item(manager[name])
                             if type(to_preview) == Image.Image:
                                 preview_texture.update((0, 0), (800, 800), to_preview.tobytes())
                                 preview_text = None
                                 preview_model = None
                             elif type(to_preview) == str:
-                                preview_text = to_preview
+                                if to_preview.startswith("#*"):
+                                    reader = csv.reader(to_preview.splitlines(), delimiter="^")
+                                    preview_text = list(reader)
+                                else:
+                                    preview_text = to_preview
                                 preview_model = None
                             elif type(to_preview) == DME:
                                 render_dme_to_texture(to_preview, framebuffer)
-                                print(to_preview.meshes[0].skin_indices[:64])
-                                print(to_preview.meshes[0].skin_weights[:64])
                                 preview_model = to_preview
                                 preview_text = None
-
+                
         imgui.end_child()
         imgui.same_line()
         imgui.begin_child("Preview")
-        if preview_text is not None:
+        if preview_text is not None and type(preview_text) == str:
             imgui.text_unformatted(preview_text)
+        elif preview_text is not None and type(preview_text) == list:
+            header = preview_text[0]
+            imgui.columns(len(header))
+            imgui.separator()
+            for line in preview_text:
+                if len(line) > 14 and header[14] == "MODEL_NAME" and line[14] == "":
+                    continue
+                for i, item in enumerate(line):
+                    imgui.text(item)
+                    imgui.next_column()
+                imgui.separator()
         elif preview_model is not None:
             imgui.image(render_texture, 800, 800)
         else:
             imgui.image(preview_texture.texture, 800, 800)
         imgui.end_child()
+        
         imgui.end()
+
+        if file_picker:
+            file_picker.tick()
+            if not file_picker.active:
+                if file_picker.selected is not None:
+                    file_picker_thread = file_picker_callback(file_picker.selected, file_picker.user_data)
+                    file_picker_thread.start()
+                    file_picker_callback = None
+                file_picker = None
+        
+        if file_picker_thread and not file_picker_thread.is_alive():
+            file_picker_thread = None
+            manager.refresh_assets()
 
         gl.glClearColor(0, 0, 0, 1)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
@@ -197,49 +306,6 @@ def impl_glfw_init(width: int, height: int, window_name: str):
         exit(1)
 
     return window
-    
-def dpg_main(manager: ExportManager):
-    dpg.create_context()
-    dpg.create_viewport(title="Pack Inspector", height=832)
-    dpg.setup_dearpygui()
-
-    texture_data = BytesIO()
-    Image.new("RGBA", (800, 800), (0, 0, 0, 255)).save("temp.png")
-    width, height, channels, data = dpg.load_image("temp.png")
-
-    with dpg.texture_registry(show=True):
-        dpg.add_dynamic_texture(width=width, height=height, default_value=data, tag="preview_texture")
-
-    with dpg.window(no_move=True, no_resize=True, no_title_bar=True, width=1280, height=800):
-        with dpg.child_window(width=320, tracked=True, tag="file_list"):
-            if len(manager) == 0:
-                dpg.add_text("Loading...", tag="loading_text")
-            for name in manager:
-                dpg.add_text(name)
-        with dpg.child_window(pos=[321, 0], width=1280-320):
-            dpg.add_image("preview_texture", width=width, height=height, pos = [(1280-320-800) / 2, 0])
-    
-        
-    dpg.show_viewport()
-
-    while dpg.is_dearpygui_running():
-        if manager and manager.loaded.is_set() and manager.pool is not None:
-            manager.pool.close()
-            manager.pool = None
-            logger.info("Assets loaded.")
-            dpg.delete_item("loading_text")
-            def pack_sort(a: Union[Pack1, Pack2], b: Union[Pack1, Pack2]):
-                name, _, number = zip(a.name.split("_"), b.name.split("_"))
-                return -1 if name[0].lower() < name[1].lower() else 1 if name[0].lower() > name[1].lower() else int(number[0]) - int(number[1])
-            for pack in sorted(manager.packs, key=cmp_to_key(pack_sort)):
-                with dpg.collapsing_header(label=pack.name, default_open=False, parent="file_list", user_data=pack):
-                    for item in sorted(list(pack), key=lambda x: x.name):
-                        if item.name == '':
-                            continue
-                        dpg.add_button(label="\t" + item.name, callback=preview_item, user_data=item)
-
-
-        dpg.render_dearpygui_frame()
     
 
 if __name__ == "__main__":
