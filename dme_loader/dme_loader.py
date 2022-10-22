@@ -47,7 +47,7 @@ class BoneMapEntry:
 
     @classmethod
     def load(cls, data: BytesIO) -> 'BoneMapEntry':
-        logger.info("Loading bone map entry data")
+        logger.debug("Loading bone map entry data")
         return cls(*struct.unpack("<HH", data.read(4)))
 
 class DrawCall:
@@ -291,12 +291,10 @@ class Mesh:
         
         #return cls(bpv_list, vertex_streams, vertices, colors, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count, [], {}, [])
         draw_call_count = struct.unpack("<I", data.read(4))[0]
-        logger.warning(f"Loading {draw_call_count} draw calls")
-        logger.warning(f"\t draw count: {draw_count}")
-        logger.warning(f"At offset {data.tell()}")
+        logger.info(f"Loading {draw_call_count} draw calls")
         draw_calls = [DrawCall.load(data) for _ in range(draw_call_count)]
         newline = '\n'
-        logger.warning(f"Draw calls:\n{newline.join([str(draw_call) for draw_call in draw_calls])}")
+        logger.debug(f"Draw calls:\n{newline.join([str(draw_call) for draw_call in draw_calls])}")
 
         bone_map_entry_count = struct.unpack("<I", data.read(4))[0]
         logger.warning(f"Loading {bone_map_entry_count} bone map entries")
