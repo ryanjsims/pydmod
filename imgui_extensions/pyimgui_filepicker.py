@@ -17,13 +17,15 @@ class FilePicker:
         imgui.WINDOW_ALWAYS_AUTO_RESIZE
     )
 
-    def __init__(self, title="File picker", dir_picker=False, start_dir: str | pathlib.Path = None, callback: typing.Callable = None, custom_popup_flags=0):
+    def __init__(self, title="File picker", dir_picker=False, start_dir: str | pathlib.Path = None, callback: typing.Callable = None, custom_popup_flags=0, user_data: typing.Any = None):
         self.current = 0
         self.title = title
         self.active = True
         self.elapsed = 0.0
         self.callback = callback
+        self.user_data = user_data
         self.selected: str = None
+        self.name_input: str = None
         self.items: list[str] = []
         self.dir_picker = dir_picker
         self.dir: pathlib.Path = None
@@ -139,33 +141,41 @@ class FilePicker:
 
             # Cancel button
             if imgui.button("Cancel"):  # Add "󰜺" if you have setup Material Design Icons
+                self.selected = None
                 imgui.close_current_popup()
             # Ok button
             imgui.same_line()
-            if not (is_file and not self.dir_picker) and not (is_dir and self.dir_picker):
+            if not (is_file and not self.dir_picker) and not (is_dir and self.dir_picker) and self.name_input is None:
                 imgui.internal.push_item_flag(imgui.internal.ITEM_DISABLED, True)
                 imgui.push_style_var(imgui.STYLE_ALPHA, imgui.get_style().alpha *  0.5)
             if imgui.button("Ok"):  # Add "󰄬" if you have setup Material Design Icons
-                if value == -1:
+                if value == -1 and self.name_input is None:
                     self.selected = str(self.dir)
-                else:
+                elif self.name_input is None:
                     self.selected = str(self.dir / item[len(self.dir_icon if self.dir_picker else self.file_icon):])
+                else:
+                    self.selected = self.name_input
                 imgui.close_current_popup()
-            if not (is_file and not self.dir_picker) and not (is_dir and self.dir_picker):
+            if not (is_file and not self.dir_picker) and not (is_dir and self.dir_picker) and self.name_input is None:
                 imgui.internal.pop_item_flag()
                 imgui.pop_style_var()
             # Selected text
             if (is_file and not self.dir_picker) or (is_dir and self.dir_picker):
-                imgui.same_line()
                 if value == -1:
-                    imgui.text(f"Selected:  {self.dir.name}")
+                    self.selected = self.dir.name
                 else:
-                    imgui.text(f"Selected:  {item[len(self.dir_icon if self.dir_picker else self.file_icon):]}")
+                    self.selected = item[len(self.dir_icon if self.dir_picker else self.file_icon):]
+            imgui.same_line()
+            changed, selected = imgui.input_text("##selected_item", pathlib.Path(self.selected).name if self.selected is not None else "")
+            if changed and selected == "":
+                self.name_input = None
+            elif changed:
+                self.name_input = str(self.dir / selected)
 
             imgui.end_popup()
         if not imgui.is_popup_open(self.title):
             if self.callback:
-                self.callback(self.selected)
+                self.callback(self.selected, self.user_data)
             self.active = False
 
 
