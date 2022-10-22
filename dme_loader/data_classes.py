@@ -44,6 +44,9 @@ class VertexStream:
 
     def tell(self) -> int:
         return self.data.tell()
+    
+    def rewind(self):
+        self.data.seek(0)
 
 class InputLayoutEntry:
     def __init__(self, stream: int, _type: str, usage: LayoutUsage, usage_index: int):
