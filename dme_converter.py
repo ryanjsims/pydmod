@@ -51,7 +51,7 @@ def to_obj(dme: DME, output: FileIO):
             i0, i1, i2 = mesh.indices[i] + 1, mesh.indices[i+1] + 1, mesh.indices[i+2] + 1
             output.write(f"f {i1}/{i1} {i0}/{i0} {i2}/{i2}\n")
 
-def dme_to_gltf(dme: DME, manager: AssetManager, dme_name: str) -> Tuple[GLTF2, bytes, Dict[str, PILImage.Image]]:
+def dme_to_gltf(dme: DME, manager: AssetManager, dme_name: str, output_name: str) -> Tuple[GLTF2, bytes, Dict[str, PILImage.Image]]:
     gltf = GLTF2()
     blob = b''
     offset = 0
@@ -60,17 +60,21 @@ def dme_to_gltf(dme: DME, manager: AssetManager, dme_name: str) -> Tuple[GLTF2, 
     image_indices: Dict[str, int] = {}
     if not manager.loaded.is_set():
         manager.loaded.wait()
-    #node_start = len(gltf.nodes)
     offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, image_indices, offset, blob, dme_name)
-    #node_end = len(gltf.nodes)
-
-    #gltf.nodes.append(Node(children=[i for i in range(node_start, node_end)]))
 
     gltf.buffers.append(Buffer(
         byteLength=len(blob)
     ))
     gltf.scene = 0
-    gltf.scenes.append(Scene(nodes=[i for i in range(len(gltf.nodes))]))
+    if len(gltf.nodes) > 1:
+        gltf.scenes.append(Scene(nodes=[len(gltf.nodes)]))
+        gltf.nodes.append(Node(
+            name=output_name,
+            children=[i for i in range(len(gltf.nodes))]
+        ))
+    elif len(gltf.nodes) == 1:
+        gltf.scenes.append(Scene(nodes=[0]))
+        gltf.nodes[0].name = output_name
 
     return gltf, blob, textures
 
@@ -85,14 +89,14 @@ def save_textures(output: str, textures: Dict[str, PILImage.Image]):
         textures[texture_name] = None
 
 def to_glb(dme: DME, output: str, manager: AssetManager, dme_name: str):
-    gltk, blob, textures = dme_to_gltf(dme, manager, dme_name)
+    gltk, blob, textures = dme_to_gltf(dme, manager, dme_name, str(Path(output).stem))
     gltk.set_binary_blob(blob)
     gltk.save_binary(output)
     save_textures(output, textures)
 
 
 def to_gltf(dme: DME, output: str,  manager: AssetManager, dme_name: str):
-    gltk, blob, textures = dme_to_gltf(dme, manager, dme_name)
+    gltk, blob, textures = dme_to_gltf(dme, manager, dme_name, str(Path(output).stem))
     blobpath = Path(output).with_suffix(".bin")
     with open(blobpath, "wb") as blob_out:
         blob_out.write(blob)

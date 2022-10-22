@@ -7,6 +7,7 @@ import warnings
 def oaat(key: bytes):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "overflow encountered in int_scalars", RuntimeWarning)
+        warnings.filterwarnings("ignore", "overflow encountered in long_scalars", RuntimeWarning)
         i = 0
         hash = int32(0)
         while i < len(key):

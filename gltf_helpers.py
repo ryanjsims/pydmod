@@ -214,6 +214,11 @@ def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage
         gltf.images.append(Image(uri="textures" + os.sep + tints_name))
 
 def add_mesh_to_gltf(gltf: GLTF2, dme: DME, mesh: DMEMesh, material_index: int, offset: int, blob: bytes) -> Tuple[int, bytes]:
+    if mesh is None:
+        return (offset, blob)
+    if len(mesh.vertices[0]) == 0 or len(mesh.indices) == 0:
+        logger.info("Skipping empty mesh")
+        return (offset, blob)
     vertices_bin = numpy.array(mesh.vertices[0], dtype=numpy.single).flatten().tobytes()
     indices_bin = numpy.array(mesh.indices, dtype=numpy.ushort if mesh.index_size == 2 else numpy.uintc).tobytes()
     if 0 in mesh.normals:
@@ -333,6 +338,11 @@ def add_mesh_to_gltf(gltf: GLTF2, dme: DME, mesh: DMEMesh, material_index: int, 
 
 def add_chunk_to_gltf(gltf: GLTF2, chunk: CNK0, material_index: int, offset: int, blob: bytes) -> Tuple[int, bytes]:
     chunk.calculate_verts()
+
+    if len(chunk.verts) == 0 or len(chunk.triangles) == 0:
+        logger.info("Skipping empty chunk")
+        return (offset, blob)
+
     triangles = []
     for batch in chunk.triangles:
         for i in batch:

@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple, Dict
 from enum import IntEnum
 from aabbtree import AABB
 from numpy import indices
+import numpy
 
 from . import jenkins
 from .data_classes import VertexStream, InputLayout, MaterialDefinition, ParameterGroup, LayoutUsage, input_layout_formats
@@ -30,8 +31,11 @@ def normalize(vertex: Tuple[float, float, float]):
 class Bone:
     def __init__(self):
         self.inverse_bind_pose: List[float] = []
-        self.bbox: List[float] = []
+        self.bbox: AABB = None
         self.namehash: int = -1
+    
+    def __repr__(self):
+        return f"Bone(namehash={self.namehash}, bbox={self.bbox}, inverse_bind_pose={self.inverse_bind_pose})"
 
 class BoneMapEntry:
     def __init__(self, bone_index: int, global_index: int):
@@ -156,7 +160,7 @@ class Mesh:
         )
     
     @classmethod
-    def load(cls, data: BytesIO, input_layout: Optional[InputLayout]) -> 'Mesh':
+    def load(cls, data: BytesIO, input_layout: Optional[InputLayout]) -> Optional['Mesh']:
         logger.info("Loading mesh data")
         draw_offset, draw_count, bone_count, unknown = struct.unpack("<IIII", data.read(16))
         assert unknown == 0xFFFFFFFF, "{:x}".format(unknown)
@@ -192,6 +196,9 @@ class Mesh:
             logger.warning("Available matching layouts:")
             for i, (name, layout) in enumerate(options):
                 logger.warning(f"  {i+1}. {name} [{hash(layout)}] - {', '.join(map(str, layout.sizes))}")
+            if len(options) == 0:
+                logger.warning("  None! Skipping model")
+                return None
             resp = ""
             while not resp.isnumeric() or (int(resp) - 1 < 0 or int(resp) > len(options)):
                 resp = input("Enter the number of the material to use: ")
@@ -208,6 +215,7 @@ class Mesh:
                     #logger.debug(f"Vertex {i} stream {entry.stream} - {entry.type}")
                     #logger.debug(f"Stream at position {stream.tell()}")
                     value = struct.unpack(format, stream.data.read(size))
+                    orig_value = value[0]
                     if entry.type == "ubyte4n":
                         value = [(val[0] / 255 * 2) - 1 for val in value]
                     elif entry.type == "Float1":
@@ -234,7 +242,7 @@ class Mesh:
                     elif entry.usage == LayoutUsage.BLENDWEIGHT:
                         skin_weights.append(value)
                     elif entry.usage == LayoutUsage.BLENDINDICES:
-                        skin_indices.append(value)
+                        skin_indices.append([((orig_value >> i * 8) & 0xFF) for i in range(4)])
                     elif entry.usage == LayoutUsage.TEXCOORD:
                         if entry.usage_index not in uvs:
                             uvs[entry.usage_index] = []
@@ -281,7 +289,7 @@ class Mesh:
             temp_indices.extend(indices[i:i+3][::-1])
         indices = temp_indices
         
-        return cls(bpv_list, vertex_streams, vertices, colors, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count, [], {}, [])
+        #return cls(bpv_list, vertex_streams, vertices, colors, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count, [], {}, [])
         draw_call_count = struct.unpack("<I", data.read(4))[0]
         logger.warning(f"Loading {draw_call_count} draw calls")
         logger.warning(f"\t draw count: {draw_count}")
@@ -293,27 +301,31 @@ class Mesh:
         bone_map_entry_count = struct.unpack("<I", data.read(4))[0]
         logger.warning(f"Loading {bone_map_entry_count} bone map entries")
         bone_map_entries = [BoneMapEntry.load(data) for _ in range(bone_map_entry_count)]
-        bone_map = {entry.bone_index: entry.global_index for entry in bone_map_entries}
+        bone_map = {entry.global_index: entry.bone_index for entry in bone_map_entries}
 
         bones_count = struct.unpack("<I", data.read(4))[0]
         logger.info(f"Loading {bones_count} bones")
         bones = [Bone() for _ in range(bones_count)]
         for bone in bones:
             matrix = struct.unpack("<ffffffffffff", data.read(48))
-            bone.inverse_bind_pose = [
-                *matrix[ :3], 0,
-                *matrix[3:6], 0, 
-                *matrix[6:9], 0,
-                *matrix[9: ], 1
-            ]
-
+            bone.inverse_bind_pose = numpy.matrix([
+                [*matrix[ :3], 0,],
+                [*matrix[3:6], 0,],
+                [*matrix[6:9], 0,],
+                [*matrix[9: ], 1,],
+            ])
+        
         for bone in bones:
-            bone.bbox = struct.unpack("<ffffff", data.read(24))
+            bbox = struct.unpack("<ffffff", data.read(24))
+            if bbox[0] < bbox[4]:
+                bone.bbox = AABB([(bbox[0], bbox[3]), (bbox[1], bbox[4]), (bbox[2], bbox[5])])
+            else:
+                bone.bbox = AABB()
         
         for bone in bones:
             bone.namehash = struct.unpack("<I", data.read(4))[0]
         
-        return cls(bpv_list, vertex_streams, vertices, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count, draw_calls, bone_map, bones)
+        return cls(bpv_list, vertex_streams, vertices, colors, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count, draw_calls, bone_map, bones)
 
 class D3DXParamType(IntEnum):
     VOID=           0
@@ -568,6 +580,10 @@ class DME:
             mesh.close()
         del self.dmat
         del self.meshes
+    
+    def input_layout(self, index):
+        if 0 <= index < len(self.dmat.materials):
+            return self.dmat.materials[index].input_layout()
 
     @classmethod
     def load(cls, data: BytesIO, material_hashes: Optional[List[int]] = None, textures_only: bool = False) -> 'DME':
@@ -599,8 +615,10 @@ class DME:
             material_hash = None
             if material_hashes and i < len(material_hashes):
                 material_hash = material_hashes[i]
-            meshes.append(Mesh.load(data, dmat.materials[i].input_layout(material_hash)))
+            mesh = Mesh.load(data, dmat.materials[i].input_layout(material_hash))
+            meshes.append(mesh)
             logger.info(f"Mesh {i} loaded")
+            
         
         logger.info("DME file loaded")
         return cls(magic.decode("utf-8"), version, dmat, aabb, meshes)
