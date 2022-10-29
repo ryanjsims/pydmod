@@ -248,7 +248,6 @@ def main():
         gltf.nodes.append(Node(name="Object Instances", children=instance_nodes))
     
     if args.lights_enabled:
-
         gltf.extensionsUsed.append("KHR_lights_punctual")
         gltf.extensions["KHR_lights_punctual"] = {
             "lights": []
