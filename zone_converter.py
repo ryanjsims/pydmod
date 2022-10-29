@@ -183,6 +183,8 @@ def main():
         gltf.extensionsUsed.append("KHR_materials_specular")
         sampler = len(gltf.samplers)
         gltf.samplers.append(Sampler(
+            minFilter=LINEAR,
+            magFilter=LINEAR,
             wrapS=CLAMP_TO_EDGE,
             wrapT=CLAMP_TO_EDGE
         ))

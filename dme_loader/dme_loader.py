@@ -28,14 +28,88 @@ def normalize(vertex: Tuple[float, float, float]):
         return vertex[0] / length, vertex[1] / length, vertex[2] / length
     return vertex
 
+bone_hashes_to_names = {
+    3061072950: "SPINEUPPER",
+    4179454272: "NECK",
+    898299046: "HEAD",
+    4217541411: "L_CLAVICLE",
+    113224493: "R_CLAVICLE",
+    3783973932: "R_KNEE",
+    4268096845: "R_ANKLE",
+    2049782909: "R_BALL",
+    2907905148: "R_HIP",
+    2072860801: "PELVIS",
+    3356280828: "R_FOREARM",
+    1900803227: "L_HIP",
+    3360970358: "R_SHOULDERROLL",
+    4060706981: "SPINELOWER",
+    2242507051: "SPINEMIDDLE",
+    1665358410: "R_SHOULDER",
+    2970756967: "R_ELBOW",
+    1310993196: "R_WRIST",
+    1102577659: "R_THUMBA",
+    787765876: "R_THUMBB",
+    3860416703: "R_THUMBC",
+    812161446: "R_MIDDLEA",
+    3770474639: "R_INDEXA",
+    1034073114: "R_MIDDLEB",
+    148130434: "R_MIDDLEC",
+    931042330: "R_RINGA",
+    4277804297: "R_INDEXB",
+    2054689799: "R_INDEXC",
+    1237039252: "R_RINGB",
+    2624511473: "R_RINGC",
+    1719789456: "R_PINKYA",
+    869597751: "R_PINKYB",
+    3693662948: "R_PINKYC",
+    2525539168: "L_ANKLE",
+    1142326112: "L_BALL",
+    524728837: "L_KNEE",
+    4157307685: "L_FOREARM",
+    3291028981: "L_SHOULDERROLL",
+    3746558302: "L_SHOULDER",
+    2266553668: "L_ELBOW",
+    3216727789: "L_WRIST",
+    978245741: "L_THUMBA",
+    1282964672: "L_THUMBB",
+    1453035782: "L_THUMBC",
+    724094749: "L_MIDDLEA",
+    198244558: "L_INDEXA",
+    943876432: "L_MIDDLEB",
+    3337782962: "L_MIDDLEC",
+    4212840290: "L_INDEXB",
+    3930207657: "L_INDEXC",
+    3662356388: "L_RINGA",
+    3893213993: "L_RINGB",
+    2769958247: "L_RINGC",
+    3483479177: "L_PINKYA",
+    127966342: "L_PINKYB",
+    887355148: "L_PINKYC",
+}
+
 class Bone:
+    name: str
     def __init__(self):
-        self.inverse_bind_pose: List[float] = []
+        self.inverse_bind_pose: numpy.matrix = []
         self.bbox: AABB = None
-        self.namehash: int = -1
+        self._namehash: int = -1
+        self.name = ""
+    
+    @property
+    def namehash(self):
+        return self._namehash
+
+    @namehash.setter
+    def namehash(self, value: int):
+        self._namehash = value
+        if value in bone_hashes_to_names:
+            self.name = bone_hashes_to_names[value]
     
     def __repr__(self):
         return f"Bone(namehash={self.namehash}, bbox={self.bbox}, inverse_bind_pose={self.inverse_bind_pose})"
+    
+    def __str__(self):
+        return f"Bone(name: {self.name if self.name != '' else self._namehash})"
 
 class BoneMapEntry:
     def __init__(self, bone_index: int, global_index: int):
@@ -88,14 +162,14 @@ class DrawCall:
 
     @classmethod
     def load(cls, data: BytesIO):
-        logger.info("Loading draw call data")
+        logger.debug("Loading draw call data")
         return cls(*struct.unpack("<IIIIIIIII", data.read(36)))
 
 class Mesh:
     def __init__(self, bytes_per_vertex: List[int], vertex_streams: List[VertexStream], vertices: Dict[int, List[Tuple[float]]], colors: Dict[int, List[Tuple]],
                     normals: Dict[int, List[Tuple[float]]], binormals: Dict[int, List[Tuple[float]]], tangents: Dict[int, List[Tuple[float]]], uvs: Dict[int, List[Tuple[float]]], 
                     skin_weights: List[Tuple[float]], skin_indices: List[Tuple[int]], index_size: int, 
-                    indices: List[int], draw_offset: int, draw_count: int, bone_count: int, draw_calls: List[DrawCall], bone_map_entries: Dict[int, int], bones: List[Bone]):
+                    indices: List[int], draw_offset: int, draw_count: int, bone_count: int):
         self.vertex_size = bytes_per_vertex
         self.vertex_streams = vertex_streams
         self.vertices = vertices
@@ -111,9 +185,6 @@ class Mesh:
         self.draw_offset = draw_offset
         self.draw_count = draw_count
         self.bone_count = bone_count
-        self.draw_calls = draw_calls
-        self.bone_map = bone_map_entries
-        self.bones = bones
         self.__serialized = None
     
     def close(self):
@@ -128,9 +199,6 @@ class Mesh:
         del self.skin_indices
         del self.skin_weights
         del self.indices
-        del self.bones
-        del self.draw_calls
-        del self.bone_map
 
     def __str__(self) -> str:
         return f"Mesh (vertex count {len(self.vertices)} draw calls {len(self.draw_calls)} indices {len(self.indices)})"
@@ -155,14 +223,14 @@ class Mesh:
     def __len__(self):
         return (
             32 + sum([4 + len(stream.data) for stream in self.vertex_streams]) 
-            + self.index_size * len(self.indices) + 4 + len(self.draw_calls) * len(self.draw_calls[0])
-            + 4 + 4 * len(self.bone_map) + (48 + 24 + 4) * len(self.bones)
+            + self.index_size * len(self.indices) + 4
         )
     
     @classmethod
     def load(cls, data: BytesIO, input_layout: Optional[InputLayout]) -> Optional['Mesh']:
         logger.info("Loading mesh data")
         draw_offset, draw_count, bone_count, unknown = struct.unpack("<IIII", data.read(16))
+        logger.info(f"{draw_offset=} {draw_count=} {bone_count=}")
         assert unknown == 0xFFFFFFFF, "{:x}".format(unknown)
         vert_stream_count, index_size, index_count, vertex_count = struct.unpack("<IIII", data.read(16))
         
@@ -192,17 +260,21 @@ class Mesh:
                     continue
                 if all([size == layout.sizes[i] for i, size in enumerate(bpv_list)]):
                     options.append((name, layout))
-            logger.warning(f"Strides: {', '.join(map(str, bpv_list))}")
-            logger.warning("Available matching layouts:")
-            for i, (name, layout) in enumerate(options):
-                logger.warning(f"  {i+1}. {name} [{hash(layout)}] - {', '.join(map(str, layout.sizes))}")
-            if len(options) == 0:
-                logger.warning("  None! Skipping model")
-                return None
-            resp = ""
-            while not resp.isnumeric() or (int(resp) - 1 < 0 or int(resp) > len(options)):
-                resp = input("Enter the number of the material to use: ")
-            input_layout = options[int(resp) - 1][1]
+            if len(options) == 1:
+                input_layout = options[0][1]
+                resp = 1
+            else:
+                logger.warning(f"Strides: {', '.join(map(str, bpv_list))}")
+                logger.warning("Available matching layouts:")
+                for i, (name, layout) in enumerate(options):
+                    logger.warning(f"  {i+1}. {name} [{hash(layout)}] - {', '.join(map(str, layout.sizes))}")
+                if len(options) == 0:
+                    logger.warning("  None! Skipping model")
+                    return None
+                resp = ""
+                while not resp.isnumeric() or (int(resp) - 1 < 0 or int(resp) > len(options)):
+                    resp = input("Enter the number of the material to use: ")
+                input_layout = options[int(resp) - 1][1]
             logger.warning(f"Using material '{options[int(resp) - 1][0]}'...")
 
         logger.info(f"Loading {vertex_count} vertices...")
@@ -289,41 +361,8 @@ class Mesh:
             temp_indices.extend(indices[i:i+3][::-1])
         indices = temp_indices
         
-        #return cls(bpv_list, vertex_streams, vertices, colors, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count, [], {}, [])
-        draw_call_count = struct.unpack("<I", data.read(4))[0]
-        logger.info(f"Loading {draw_call_count} draw calls")
-        draw_calls = [DrawCall.load(data) for _ in range(draw_call_count)]
-        newline = '\n'
-        logger.debug(f"Draw calls:\n{newline.join([str(draw_call) for draw_call in draw_calls])}")
-
-        bone_map_entry_count = struct.unpack("<I", data.read(4))[0]
-        logger.warning(f"Loading {bone_map_entry_count} bone map entries")
-        bone_map_entries = [BoneMapEntry.load(data) for _ in range(bone_map_entry_count)]
-        bone_map = {entry.global_index: entry.bone_index for entry in bone_map_entries}
-
-        bones_count = struct.unpack("<I", data.read(4))[0]
-        logger.info(f"Loading {bones_count} bones")
-        bones = [Bone() for _ in range(bones_count)]
-        for bone in bones:
-            matrix = struct.unpack("<ffffffffffff", data.read(48))
-            bone.inverse_bind_pose = numpy.matrix([
-                [*matrix[ :3], 0,],
-                [*matrix[3:6], 0,],
-                [*matrix[6:9], 0,],
-                [*matrix[9: ], 1,],
-            ])
+        return cls(bpv_list, vertex_streams, vertices, colors, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count)
         
-        for bone in bones:
-            bbox = struct.unpack("<ffffff", data.read(24))
-            if bbox[0] < bbox[4]:
-                bone.bbox = AABB([(bbox[0], bbox[3]), (bbox[1], bbox[4]), (bbox[2], bbox[5])])
-            else:
-                bone.bbox = AABB()
-        
-        for bone in bones:
-            bone.namehash = struct.unpack("<I", data.read(4))[0]
-        
-        return cls(bpv_list, vertex_streams, vertices, colors, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count, draw_calls, bone_map, bones)
 
 class D3DXParamType(IntEnum):
     VOID=           0
@@ -563,7 +602,7 @@ class DME:
     aabb: AABB
     meshes: List[Mesh]
     
-    def __init__(self, magic: str, version: int, dmat: DMAT, aabb: AABB, meshes: List[Mesh]):
+    def __init__(self, magic: str, version: int, dmat: DMAT, aabb: AABB, meshes: List[Mesh], draw_calls: List[DrawCall], bone_map: Dict[int, int], bones: List[Bone]):
         assert magic == "DMOD", "Not a DME file"
         assert version == 4, "Unsupported DME version"
         self.magic = magic
@@ -571,6 +610,9 @@ class DME:
         self.dmat = dmat
         self.aabb = aabb
         self.meshes = meshes
+        self.draw_calls = draw_calls
+        self.bone_map = bone_map
+        self.bones = bones
 
     def close(self):
         self.dmat.close()
@@ -578,6 +620,9 @@ class DME:
             mesh.close()
         del self.dmat
         del self.meshes
+        del self.draw_calls
+        del self.bone_map
+        del self.bones
     
     def input_layout(self, index):
         if 0 <= index < len(self.dmat.materials):
@@ -616,7 +661,40 @@ class DME:
             mesh = Mesh.load(data, dmat.materials[i].input_layout(material_hash))
             meshes.append(mesh)
             logger.info(f"Mesh {i} loaded")
-            
+
+        #Draw info block
+        draw_call_count = struct.unpack("<I", data.read(4))[0]
+        logger.info(f"Loading {draw_call_count} draw calls")
+        draw_calls: List[DrawCall] = [DrawCall.load(data) for _ in range(draw_call_count)]
+        newline = '\n'
+        logger.debug(f"Draw calls:\n{newline.join([str(draw_call) for draw_call in draw_calls])}")
+
+        bone_map_entry_count = struct.unpack("<I", data.read(4))[0]
+        logger.info(f"Loading {bone_map_entry_count} bone map entries")
+        bone_map_entries = [BoneMapEntry.load(data) for _ in range(bone_map_entry_count)]
+        bone_map = {entry.global_index: entry.bone_index for entry in bone_map_entries}
+
+        bones_count = struct.unpack("<I", data.read(4))[0]
+        logger.info(f"Loading {bones_count} bones")
+        bones: List[Bone] = [Bone() for _ in range(bones_count)]
+        for bone in bones:
+            matrix = struct.unpack("<ffffffffffff", data.read(48))
+            bone.inverse_bind_pose = numpy.matrix([
+                [*matrix[ :3], 0,],
+                [*matrix[3:6], 0,],
+                [*matrix[6:9], 0,],
+                [*matrix[9: ], 1,],
+            ])
+        
+        for bone in bones:
+            bbox = struct.unpack("<ffffff", data.read(24))
+            if bbox[0] < bbox[4]:
+                bone.bbox = AABB([(bbox[0], bbox[3]), (bbox[1], bbox[4]), (bbox[2], bbox[5])])
+            else:
+                bone.bbox = AABB()
+        
+        for bone in bones:
+            bone.namehash = struct.unpack("<I", data.read(4))[0]
         
         logger.info("DME file loaded")
-        return cls(magic.decode("utf-8"), version, dmat, aabb, meshes)
+        return cls(magic.decode("utf-8"), version, dmat, aabb, meshes, draw_calls, bone_map, bones)

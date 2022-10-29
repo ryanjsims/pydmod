@@ -2384,6 +2384,58 @@
                 }
             ]
         },
+        "CharacterTwoTex": {
+            "name": "CharacterTwoTex",
+            "sizes": {
+                "0": 20,
+                "1": 16
+            },
+            "hash": 2201291178,
+            "entries": [
+                {
+                    "stream": 0,
+                    "type": "Float3",
+                    "usage": "Position",
+                    "usageIndex": 0
+                },
+                {
+                    "stream": 0,
+                    "type": "ubyte4n",
+                    "usage": "BlendWeight",
+                    "usageIndex": 0
+                },
+                {
+                    "stream": 0,
+                    "type": "D3dcolor",
+                    "usage": "BlendIndices",
+                    "usageIndex": 0
+                },
+                {
+                    "stream": 1,
+                    "type": "ubyte4n",
+                    "usage": "Tangent",
+                    "usageIndex": 0
+                },
+                {
+                    "stream": 1,
+                    "type": "ubyte4n",
+                    "usage": "Binormal",
+                    "usageIndex": 0
+                },
+                {
+                    "stream": 1,
+                    "type": "Float16_2",
+                    "usage": "Texcoord",
+                    "usageIndex": 0
+                },
+                {
+                    "stream": 1,
+                    "type": "Float16_2",
+                    "usage": "Texcoord",
+                    "usageIndex": 1
+                }
+            ]
+        },
         "CharacterRigid": {
             "name": "CharacterRigid",
             "sizes": {
@@ -2427,6 +2479,46 @@
                     "type": "Float16_2",
                     "usage": "Texcoord",
                     "usageIndex": 2
+                }
+            ]
+        },
+        "CharacterRigidTwoTex": {
+            "name": "CharacterRigidTwoTex",
+            "sizes": {
+                "0": 12,
+                "1": 16
+            },
+            "hash": 3089542856,
+            "entries": [
+                {
+                    "stream": 0,
+                    "type": "Float3",
+                    "usage": "Position",
+                    "usageIndex": 0
+                },
+                {
+                    "stream": 1,
+                    "type": "ubyte4n",
+                    "usage": "Tangent",
+                    "usageIndex": 0
+                },
+                {
+                    "stream": 1,
+                    "type": "ubyte4n",
+                    "usage": "Binormal",
+                    "usageIndex": 0
+                },
+                {
+                    "stream": 1,
+                    "type": "Float16_2",
+                    "usage": "Texcoord",
+                    "usageIndex": 0
+                },
+                {
+                    "stream": 1,
+                    "type": "Float16_2",
+                    "usage": "Texcoord",
+                    "usageIndex": 1
                 }
             ]
         },

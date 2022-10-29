@@ -26,6 +26,8 @@ texture_name_to_indices = {}
 
 def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[int, List[int]], textures: Dict[str, PILImage.Image], image_indices: Dict[str, int], offset: int, blob: bytes, dme_name: str) -> Tuple[int, bytes]:
     global texture_name_to_indices
+    if len(gltf.samplers) == 0:
+        gltf.samplers.append(Sampler(magFilter=LINEAR, minFilter=LINEAR))
     texture_groups_dict = {}
     atlas_set = set()
     for texture in dme.dmat.textures:
@@ -62,15 +64,12 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
                 continue
 
             if suffix == "_N.png":
-                mat_info_entry["norm"] = NormalMaterialTexture(index=len(gltf.textures))
+                mat_info_entry["norm"] = NormalMaterialTexture(index=image_indices[name + suffix])
             else:
-                mat_info_entry[SUFFIX_TO_TYPE[suffix]] = TextureInfo(index=len(gltf.textures))
+                mat_info_entry[SUFFIX_TO_TYPE[suffix]] = TextureInfo(index=image_indices[name + suffix])
 
-            texture_name_to_indices[name + suffix] = len(gltf.textures)
-            gltf.textures.append(Texture(
-                name=name + suffix,
-                source=image_indices[name + suffix]
-            ))
+            texture_name_to_indices[name + suffix] = image_indices[name + suffix]
+            
         mat_info.append(mat_info_entry)
     
     atlas_texture = None
@@ -78,14 +77,8 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
         if str(Path(atlas).with_suffix(".png")) in texture_name_to_indices:
             atlas_texture = texture_name_to_indices[str(Path(atlas).with_suffix(".png"))]
             continue
+        atlas_texture = len(gltf.textures)
         load_texture(manager, gltf, textures, atlas, image_indices)
-        texture_name_to_indices[str(Path(atlas).with_suffix(".png"))] = len(gltf.textures)
-        gltf.textures.append(Texture(
-            name=str(Path(atlas).with_suffix(".png")),
-            source=image_indices[str(Path(atlas).with_suffix(".png"))]
-        ))
-        atlas_texture = texture_name_to_indices[str(Path(atlas).with_suffix(".png"))]
-
     
     mesh_materials = []
     assert len(dme.meshes) == len(dme.dmat.materials), "Mesh count != material count"
@@ -172,15 +165,13 @@ def unpack_specular(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILI
         emissive = im.getchannel("B").convert(mode="RGB")
     ename = name[:-5] + "E.png"
     textures[ename] = emissive
-    texture_indices[ename] = len(gltf.images)
-    #gltf.textures[min(CNS_seen) * 4 + 3].name = ename
-    #gltf.textures[min(CNS_seen) * 4 + 3].source = len(gltf.images)
+    texture_indices[ename] = len(gltf.textures)
+    gltf.textures.append(Texture(source=len(gltf.images), sampler=0, name=ename))
     gltf.images.append(Image(uri="textures" + os.sep + ename))
     mrname = name[:-5] + "MR.png"
     textures[mrname] = metallicRoughness
-    texture_indices[mrname] = len(gltf.images)
-    #gltf.textures[min(CNS_seen) * 4 + 1].name = mrname
-    #gltf.textures[min(CNS_seen) * 4 + 1].source = len(gltf.images)
+    texture_indices[mrname] = len(gltf.textures)
+    gltf.textures.append(Texture(source=len(gltf.images), sampler=0, name=mrname))
     gltf.images.append(Image(uri="textures" + os.sep + mrname))
 
 def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage.Image, name: str, texture_indices: Dict[str, int]):
@@ -196,10 +187,9 @@ def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage
         z = im.getchannel("B")
     normal = PILImage.merge("RGB", [x, y, z])
     normal_name = str(Path(name).with_suffix(".png"))
-    #gltf.textures[min(CNS_seen) * 4 + 2].name = normal_name
-    #gltf.textures[min(CNS_seen) * 4 + 2].source = len(gltf.images)
     textures[normal_name] = normal
-    texture_indices[normal_name] = len(gltf.images)
+    texture_indices[normal_name] = len(gltf.textures)
+    gltf.textures.append(Texture(source=len(gltf.images), sampler=0, name=normal_name))
     gltf.images.append(Image(uri="textures" + os.sep + normal_name))
 
 
@@ -210,7 +200,8 @@ def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage
         tints = PILImage.merge("RGB", [primary_tint, secondary_tint, camo_tint])
         tints_name = normal_name[:-5] + "T.png"
         textures[tints_name] = tints
-        texture_indices[tints_name] = len(gltf.images)
+        texture_indices[tints_name] = len(gltf.textures)
+        gltf.textures.append(Texture(source=len(gltf.images), sampler=0, name=tints_name))
         gltf.images.append(Image(uri="textures" + os.sep + tints_name))
 
 def add_mesh_to_gltf(gltf: GLTF2, dme: DME, mesh: DMEMesh, material_index: int, offset: int, blob: bytes) -> Tuple[int, bytes]:
@@ -432,8 +423,10 @@ def load_texture(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImag
     im = PILImage.open(BytesIO(texture.get_data()))
     if re.match(".*_(s|S).dds", name):
         unpack_specular(manager, gltf, textures, im, name, texture_indices)
+        return
     elif re.match(".*_(n|N).dds", name):
         unpack_normal(gltf, textures, im, name, texture_indices)
+        return
     elif re.match(".*_(c|C).dds", name):
         #gltf.textures[min(CNS_seen) * 4].name = name
         texture_indices[str(Path(name).with_suffix(".png"))] = len(gltf.images)
@@ -443,4 +436,5 @@ def load_texture(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImag
         texture_indices[str(Path(name).with_suffix(".png"))] = len(gltf.images)
         name = str(Path(name).with_suffix(".png"))
         textures[name] = im
+    gltf.textures.append(Texture(source=len(gltf.images), sampler=0, name=name))
     gltf.images.append(Image(uri="textures" + os.sep + name))
