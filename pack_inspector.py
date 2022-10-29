@@ -8,7 +8,6 @@ from OpenGLContext.texture import Texture
 from io import BytesIO
 import logging
 from typing import Dict, List, Tuple, Union
-import dearpygui.dearpygui as dpg
 from pathlib import Path
 from glob import glob
 from multiprocessing import Event, Pool
@@ -16,10 +15,8 @@ from export_manager import ExportManager
 from DbgPack import Asset2, Pack1, Pack2
 from functools import cmp_to_key
 from PIL import Image, UnidentifiedImageError
-from PIL.Image import Transpose
 import magic
 import imgui
-import numpy
 from imgui.integrations.glfw import GlfwRenderer
 from imgui_extensions import FilePicker
 from dme_loader import DME
@@ -223,7 +220,7 @@ def main():
                                 preview_text = None
                                 preview_model = None
                             elif type(to_preview) == str:
-                                if to_preview.startswith("#*"):
+                                if to_preview.startswith("#") and "^" in to_preview[:64]:
                                     reader = csv.reader(to_preview.splitlines(), delimiter="^")
                                     preview_text = list(reader)
                                 else:
