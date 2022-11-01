@@ -67,10 +67,13 @@ def dme_to_gltf(dme: DME, manager: AssetManager, dme_name: str, output_name: str
     ))
     gltf.scene = 0
     if len(gltf.nodes) > 1:
+        parented_nodes = []
+        for i in range(len(gltf.nodes)):
+            parented_nodes.extend(gltf.nodes[i].children)
         gltf.scenes.append(Scene(nodes=[len(gltf.nodes)]))
         gltf.nodes.append(Node(
             name=output_name,
-            children=[i for i in range(len(gltf.nodes))]
+            children=[i for i in range(len(gltf.nodes)) if i not in parented_nodes]
         ))
     elif len(gltf.nodes) == 1:
         gltf.scenes.append(Scene(nodes=[0]))
