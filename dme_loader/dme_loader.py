@@ -12,6 +12,7 @@ import numpy
 
 from . import jenkins
 from .data_classes import VertexStream, InputLayout, MaterialDefinition, ParameterGroup, LayoutUsage, input_layout_formats
+from .ps2_bone_utils import BONE_HASHMAP
 
 logger = logging.getLogger("dme_loader")
 
@@ -28,65 +29,6 @@ def normalize(vertex: Tuple[float, float, float]):
         return vertex[0] / length, vertex[1] / length, vertex[2] / length
     return vertex
 
-bone_hashes_to_names = {
-    3061072950: "SPINEUPPER",
-    4179454272: "NECK",
-    898299046: "HEAD",
-    4217541411: "L_CLAVICLE",
-    113224493: "R_CLAVICLE",
-    3783973932: "R_KNEE",
-    4268096845: "R_ANKLE",
-    2049782909: "R_BALL",
-    2907905148: "R_HIP",
-    2072860801: "PELVIS",
-    3356280828: "R_FOREARM",
-    1900803227: "L_HIP",
-    3360970358: "R_SHOULDERROLL",
-    4060706981: "SPINELOWER",
-    2242507051: "SPINEMIDDLE",
-    1665358410: "R_SHOULDER",
-    2970756967: "R_ELBOW",
-    1310993196: "R_WRIST",
-    1102577659: "R_THUMBA",
-    787765876: "R_THUMBB",
-    3860416703: "R_THUMBC",
-    812161446: "R_MIDDLEA",
-    3770474639: "R_INDEXA",
-    1034073114: "R_MIDDLEB",
-    148130434: "R_MIDDLEC",
-    931042330: "R_RINGA",
-    4277804297: "R_INDEXB",
-    2054689799: "R_INDEXC",
-    1237039252: "R_RINGB",
-    2624511473: "R_RINGC",
-    1719789456: "R_PINKYA",
-    869597751: "R_PINKYB",
-    3693662948: "R_PINKYC",
-    2525539168: "L_ANKLE",
-    1142326112: "L_BALL",
-    524728837: "L_KNEE",
-    4157307685: "L_FOREARM",
-    3291028981: "L_SHOULDERROLL",
-    3746558302: "L_SHOULDER",
-    2266553668: "L_ELBOW",
-    3216727789: "L_WRIST",
-    978245741: "L_THUMBA",
-    1282964672: "L_THUMBB",
-    1453035782: "L_THUMBC",
-    724094749: "L_MIDDLEA",
-    198244558: "L_INDEXA",
-    943876432: "L_MIDDLEB",
-    3337782962: "L_MIDDLEC",
-    4212840290: "L_INDEXB",
-    3930207657: "L_INDEXC",
-    3662356388: "L_RINGA",
-    3893213993: "L_RINGB",
-    2769958247: "L_RINGC",
-    3483479177: "L_PINKYA",
-    127966342: "L_PINKYB",
-    887355148: "L_PINKYC",
-}
-
 class Bone:
     name: str
     def __init__(self):
@@ -102,8 +44,8 @@ class Bone:
     @namehash.setter
     def namehash(self, value: int):
         self._namehash = value
-        if value in bone_hashes_to_names:
-            self.name = bone_hashes_to_names[value]
+        if value in BONE_HASHMAP:
+            self.name = BONE_HASHMAP[value]
     
     def __repr__(self):
         return f"Bone(namehash={self.namehash}, bbox={self.bbox}, inverse_bind_pose={self.inverse_bind_pose})"
@@ -210,13 +152,6 @@ class Mesh:
                 + struct.pack("<IIII", len(self.vertex_streams), self.index_size, len(self.indices), len(self.vertices))
                 + b''.join([struct.pack("<I", stream.stride) + stream.data for stream in self.vertex_streams])
                 + b''.join([struct.pack("<H" if self.index_size == 2 else "<I", index) for index in self.indices])
-                + struct.pack("<I", len(self.draw_calls))
-                + b''.join([draw_call.serialize() for draw_call in self.draw_calls])
-                + struct.pack("<I", len(self.bone_map))
-                + b''.join([struct.pack("<HH", bone_index, global_index) for bone_index, global_index in self.bone_map])
-                + b''.join([struct.pack("<ffffffffffff", *bone.inverse_bind_pose[:3], *bone.inverse_bind_pose[4:7], *bone.inverse_bind_pose[8:11], *bone.inverse_bind_pose[12:15]) for bone in self.bones])
-                + b''.join([struct.pack("<ffffff", *bone.bbox) for bone in self.bones])
-                + b''.join([struct.pack("<I", bone.namehash) for bone in self.bones])
             )
         return self.__serialized
     
@@ -312,7 +247,7 @@ class Mesh:
                             tangents[entry.usage_index] = []
                         tangents[entry.usage_index].append(value)
                     elif entry.usage == LayoutUsage.BLENDWEIGHT:
-                        skin_weights.append(value)
+                        skin_weights.append(value if entry.type != "ubyte4n" else [(val + 1) / 2 for val in value])
                     elif entry.usage == LayoutUsage.BLENDINDICES:
                         skin_indices.append([((orig_value >> i * 8) & 0xFF) for i in range(4)])
                     elif entry.usage == LayoutUsage.TEXCOORD:
@@ -683,8 +618,8 @@ class DME:
                 [*matrix[ :3], 0,],
                 [*matrix[3:6], 0,],
                 [*matrix[6:9], 0,],
-                [*matrix[9: ], 1,],
-            ])
+                [*matrix[9: ], 1,]
+            ], dtype=numpy.float32)
         
         for bone in bones:
             bbox = struct.unpack("<ffffff", data.read(24))
