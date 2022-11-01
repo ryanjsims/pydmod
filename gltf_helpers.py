@@ -1,4 +1,5 @@
 import logging
+import math
 import numpy
 import os
 import re
@@ -6,11 +7,14 @@ import re
 from re import RegexFlag
 
 from cnk_loader import CNK0
-from dme_loader import DME, Mesh as DMEMesh, jenkins
+from dme_loader import DME, Mesh as DMEMesh, HIERARCHY, RIGIFY_MAPPINGS
 from DbgPack import AssetManager
 from io import BytesIO
 from PIL import Image as PILImage, ImageChops
+from scipy.spatial.transform import Rotation
 from pygltflib import *
+
+from dme_loader.dme_loader import Bone
 
 logger = logging.getLogger("GLTF Helpers")
 
@@ -143,7 +147,9 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
         logger.info(f"Writing mesh {i + 1} of {len(dme.meshes)}")
         material_index = mesh_materials[i]
         offset, blob = add_mesh_to_gltf(gltf, dme, mesh, material_index, offset, blob)
-        
+    
+    if len(dme.bones) > 0:
+        offset, blob = add_skeleton_to_gltf(gltf, dme, offset, blob)
     
     return offset, blob
 
@@ -313,6 +319,44 @@ def add_mesh_to_gltf(gltf: GLTF2, dme: DME, mesh: DMEMesh, material_index: int, 
         offset += len(bin)
         blob += bin
     
+    if len(mesh.skin_indices) > 0:
+        attributes.append([JOINTS_0, len(gltf.accessors)])
+        dme.bone_map[63] = 0
+        skin_indices = list(map(lambda x: [dme.bone_map[val] for val in x], mesh.skin_indices))
+        skin_indices_bin = numpy.array(skin_indices, dtype=numpy.ubyte).flatten().tobytes()
+        gltf.accessors.append(Accessor(
+            bufferView=len(gltf.bufferViews),
+            componentType=UNSIGNED_BYTE,
+            count=len(mesh.skin_indices),
+            type=VEC4,
+        ))
+        gltf.bufferViews.append(BufferView(
+            buffer=0,
+            byteOffset=offset,
+            byteLength=len(skin_indices_bin),
+            target=ARRAY_BUFFER
+        ))
+        offset += len(skin_indices_bin)
+        blob += skin_indices_bin
+
+    if len(mesh.skin_weights) > 0:
+        attributes.append([WEIGHTS_0, len(gltf.accessors)])
+        skin_weights_bin = numpy.array(mesh.skin_weights, dtype=numpy.float32).tobytes()
+        gltf.accessors.append(Accessor(
+            bufferView=len(gltf.bufferViews),
+            componentType=FLOAT,
+            count=len(mesh.skin_weights),
+            type=VEC4,
+        ))
+        gltf.bufferViews.append(BufferView(
+            buffer=0,
+            byteOffset=offset,
+            byteLength=len(skin_weights_bin),
+            target=ARRAY_BUFFER
+        ))
+        offset += len(skin_weights_bin)
+        blob += skin_weights_bin
+    
     gltf.nodes.append(Node(
         mesh=len(gltf.meshes)
     ))
@@ -324,6 +368,67 @@ def add_mesh_to_gltf(gltf: GLTF2, dme: DME, mesh: DMEMesh, material_index: int, 
             material=material_index
         )]
     ))
+
+    return offset, blob
+
+
+def add_skeleton_to_gltf(gltf: GLTF2, dme: DME, offset: int, blob: bytes) -> Tuple[int, bytes]:
+    logger.info(f"Adding skeleton with {len(dme.bones)} bones...")
+    matrices_bin = b''
+    joints = []
+    bone_nodes: Dict[str, int] = {}
+    for bone in dme.bones:
+        matrices_bin += bone.inverse_bind_pose.tobytes()
+        translation = bone.inverse_bind_pose.I[3,0:3].tolist()[0]
+        translation = [translation[0], translation[1], translation[2]]
+        scale = []
+        rotation = bone.inverse_bind_pose.I.copy()
+        rotation[3,0:3] = [0., 0., 0.]
+        for i in range(3):
+            value = float(numpy.linalg.norm(bone.inverse_bind_pose.I[i,0:3]))
+            if math.fabs(1.0 - value) < 0.001:
+                value = 1.0
+            scale.append(value)
+            rotation[i,0:3] /= value
+        r = Rotation.from_matrix(rotation[0:3,0:3])
+        bone_nodes[bone.name] = len(gltf.nodes)
+        joints.append(len(gltf.nodes))
+        gltf.nodes.append(Node(
+            translation=translation,
+            rotation=r.as_quat().tolist(),
+            scale=scale,
+            name="{}".format(RIGIFY_MAPPINGS[bone.name] if bone.name in RIGIFY_MAPPINGS else bone.name if bone.name != '' else bone.namehash)
+        ))
+    for name in bone_nodes:
+        if name in HIERARCHY and HIERARCHY[name] in bone_nodes:
+            gltf.nodes[bone_nodes[HIERARCHY[name]]].children.append(bone_nodes[name])
+    def update_transform(gltf: GLTF2, root: Node, parent: Optional[Node]):
+        if len(root.children) == 0:
+            return
+        for child_index in root.children:
+            update_transform(gltf, gltf.nodes[child_index], root)
+        translation = [0, 0, 0]
+        if parent is not None:
+            translation = parent.translation
+        logger.debug(f"Updating {root.name} position: {root.translation} - {translation}")
+        root.translation = [root.translation[i] - translation[i] for i in range(3)]
+    update_transform(gltf, gltf.nodes[3], None)
+    logger.info("Updated bone transforms")
+    gltf.nodes[0].skin = len(gltf.skins)
+    gltf.skins.append(Skin(inverseBindMatrices=len(gltf.accessors), joints=joints))
+    gltf.accessors.append(Accessor(
+        bufferView=len(gltf.bufferViews),
+        componentType=FLOAT,
+        count=len(dme.bones),
+        type=MAT4,
+    ))
+    gltf.bufferViews.append(BufferView(
+        buffer=0,
+        byteOffset=offset,
+        byteLength=len(matrices_bin)
+    ))
+    offset += len(matrices_bin)
+    blob += matrices_bin
 
     return offset, blob
 
