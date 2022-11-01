@@ -6,6 +6,7 @@ export
 *.obj
 *.gltf
 *.glb
+*.bin
 *.exe*
 *.cnk*
 *.c
@@ -16,3 +17,4 @@ build
 .vs/
 env/
 pycnkdec.egg-info/
+*.ini
