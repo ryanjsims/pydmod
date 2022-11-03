@@ -357,6 +357,25 @@ def add_mesh_to_gltf(gltf: GLTF2, dme: DME, mesh: DMEMesh, material_index: int, 
         offset += len(skin_weights_bin)
         blob += skin_weights_bin
     
+    # if len(mesh.colors) > 0:
+    #     for index in mesh.colors:
+    #         attributes.append([f"COLOR_{index}", len(gltf.accessors)])
+    #         colors_bin = numpy.array(mesh.colors[index], dtype=numpy.float32).tobytes()
+    #         gltf.accessors.append(Accessor(
+    #             bufferView=len(gltf.bufferViews),
+    #             componentType=FLOAT,
+    #             count=len(mesh.colors[index]),
+    #             type=VEC4,
+    #         ))
+    #         gltf.bufferViews.append(BufferView(
+    #             buffer=0,
+    #             byteOffset=offset,
+    #             byteLength=len(colors_bin),
+    #             target=ARRAY_BUFFER
+    #         ))
+    #         offset += len(colors_bin)
+    #         blob += colors_bin
+
     gltf.nodes.append(Node(
         mesh=len(gltf.meshes)
     ))
@@ -402,6 +421,13 @@ def add_skeleton_to_gltf(gltf: GLTF2, dme: DME, offset: int, blob: bytes) -> Tup
     for name in bone_nodes:
         if name in HIERARCHY and HIERARCHY[name] in bone_nodes:
             gltf.nodes[bone_nodes[HIERARCHY[name]]].children.append(bone_nodes[name])
+        elif name in HIERARCHY:
+            next_bone = HIERARCHY[name]
+            while next_bone and next_bone in HIERARCHY:
+                if next_bone in bone_nodes:
+                    gltf.nodes[bone_nodes[next_bone]].children.append(bone_nodes[name])
+                    break
+                next_bone = HIERARCHY[next_bone]
     def update_transform(gltf: GLTF2, root: Node, parent: Optional[Node]):
         if len(root.children) == 0:
             return
