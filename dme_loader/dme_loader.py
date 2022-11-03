@@ -214,6 +214,8 @@ class Mesh:
 
         logger.info(f"Loading {vertex_count} vertices...")
         logger.debug(f"Entries - {input_layout.entries}")
+        logger.info(f"Input Layout: {input_layout.name}")
+        is_rigid = "rigid" in input_layout.name.lower() or "vehicle" in input_layout.name.lower()
         try:
             for i in range(vertex_count):
                 for entry in input_layout.entries:
@@ -222,7 +224,7 @@ class Mesh:
                     #logger.debug(f"Vertex {i} stream {entry.stream} - {entry.type}")
                     #logger.debug(f"Stream at position {stream.tell()}")
                     value = struct.unpack(format, stream.data.read(size))
-                    orig_value = value[0]
+                    orig_value = value
                     if entry.type == "ubyte4n":
                         value = [(val[0] / 255 * 2) - 1 for val in value]
                     elif entry.type == "Float1":
@@ -242,14 +244,18 @@ class Mesh:
                         if entry.usage_index not in binormals:
                             binormals[entry.usage_index] = []
                         binormals[entry.usage_index].append(value)
+                        if is_rigid:
+                            skin_indices.append([orig_value[3][0], 0, 0, 0])
                     elif entry.usage == LayoutUsage.TANGENT:
                         if entry.usage_index not in tangents:
                             tangents[entry.usage_index] = []
                         tangents[entry.usage_index].append(value)
+                        if is_rigid:
+                            skin_weights.append([1., 0., 0., 0.])
                     elif entry.usage == LayoutUsage.BLENDWEIGHT:
                         skin_weights.append(value if entry.type != "ubyte4n" else [(val + 1) / 2 for val in value])
                     elif entry.usage == LayoutUsage.BLENDINDICES:
-                        skin_indices.append([((orig_value >> i * 8) & 0xFF) for i in range(4)])
+                        skin_indices.append([((orig_value[0] >> i * 8) & 0xFF) for i in range(4)])
                     elif entry.usage == LayoutUsage.TEXCOORD:
                         if entry.usage_index not in uvs:
                             uvs[entry.usage_index] = []
