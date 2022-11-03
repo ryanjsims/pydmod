@@ -4,6 +4,7 @@ from glob import glob
 from multiprocessing import Pool
 from pathlib import Path
 from export_manager import ExportManager
+from argparse import ArgumentParser
 
 logger = logging.getLogger("Open Pack Files")
 
@@ -27,8 +28,18 @@ manager = None
 def main():
     global manager, paths, handler
     logging.basicConfig(level=logging.INFO, handlers=[handler])
+
+    parser = ArgumentParser(description="Opens pack files for interactive use")
+    parser.add_argument("-n", "--namelist", default=None, type=str, help="Namelist file to load for additional file names")
+    args = parser.parse_args()
+
+    namelist = None
+    if args.namelist is not None:
+        with open(args.namelist) as f:
+            namelist = f.read().split("\n")
+
     with Pool(8) as pool:
-        manager = ExportManager(paths, p=pool)
+        manager = ExportManager(paths, p=pool, namelist=namelist)
         print("Loading packs...")
         manager.loaded.wait()
         print("Loaded.")
