@@ -2526,7 +2526,7 @@
             "name": "TankTread",
             "sizes": {
                 "0": 20,
-                "1": 20
+                "1": 24
             },
             "hash": 2025203475,
             "entries": [
@@ -2577,6 +2577,12 @@
                     "type": "ubyte4n",
                     "usage": "Color",
                     "usageIndex": 0
+                },
+                {
+                    "stream": 1,
+                    "type": "Float16_2",
+                    "usage": "Texcoord",
+                    "usageIndex": 2
                 }
             ]
         },

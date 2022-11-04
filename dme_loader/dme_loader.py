@@ -12,7 +12,7 @@ import numpy
 
 from . import jenkins
 from .data_classes import VertexStream, InputLayout, MaterialDefinition, ParameterGroup, LayoutUsage, input_layout_formats
-from .ps2_bone_utils import BONE_HASHMAP
+from .ps2_bone_map import BONE_HASHMAP
 
 logger = logging.getLogger("dme_loader")
 
@@ -215,7 +215,7 @@ class Mesh:
         logger.info(f"Loading {vertex_count} vertices...")
         logger.debug(f"Entries - {input_layout.entries}")
         logger.info(f"Input Layout: {input_layout.name}")
-        is_rigid = "rigid" in input_layout.name.lower() or "vehicle" in input_layout.name.lower()
+        is_rigid = ("rigid" in input_layout.name.lower() or "vehicle" in input_layout.name.lower()) and bone_count > 0
         try:
             for i in range(vertex_count):
                 for entry in input_layout.entries:

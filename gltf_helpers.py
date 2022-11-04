@@ -438,9 +438,16 @@ def add_skeleton_to_gltf(gltf: GLTF2, dme: DME, offset: int, blob: bytes) -> Tup
             translation = parent.translation
         logger.debug(f"Updating {root.name} position: {root.translation} - {translation}")
         root.translation = [root.translation[i] - translation[i] for i in range(3)]
-    update_transform(gltf, gltf.nodes[3], None)
+    if "WORLDROOT" in bone_nodes:
+        node_index = bone_nodes["WORLDROOT"]
+    else:
+        node_index = bone_nodes[list(bone_nodes.keys())[0]]
+        logger.warning(bone_nodes)
+    update_transform(gltf, gltf.nodes[node_index], None)
     logger.info("Updated bone transforms")
-    gltf.nodes[0].skin = len(gltf.skins)
+    for i in range(len(gltf.nodes)):
+        if gltf.nodes[i].mesh is not None:
+            gltf.nodes[i].skin = 0
     gltf.skins.append(Skin(inverseBindMatrices=len(gltf.accessors), joints=joints))
     gltf.accessors.append(Accessor(
         bufferView=len(gltf.bufferViews),
