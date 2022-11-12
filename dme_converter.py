@@ -51,7 +51,7 @@ def to_obj(dme: DME, output: FileIO):
             i0, i1, i2 = mesh.indices[i] + 1, mesh.indices[i+1] + 1, mesh.indices[i+2] + 1
             output.write(f"f {i1}/{i1} {i0}/{i0} {i2}/{i2}\n")
 
-def dme_to_gltf(dme: DME, manager: AssetManager, dme_name: str, output_name: str) -> Tuple[GLTF2, bytes, Dict[str, PILImage.Image]]:
+def dme_to_gltf(dme: DME, manager: AssetManager, dme_name: str, output_name: str, include_skeleton: bool = True) -> Tuple[GLTF2, bytes, Dict[str, PILImage.Image]]:
     gltf = GLTF2()
     blob = b''
     offset = 0
@@ -60,7 +60,7 @@ def dme_to_gltf(dme: DME, manager: AssetManager, dme_name: str, output_name: str
     image_indices: Dict[str, int] = {}
     if not manager.loaded.is_set():
         manager.loaded.wait()
-    offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, image_indices, offset, blob, dme_name)
+    offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, image_indices, offset, blob, dme_name, include_skeleton)
 
     gltf.buffers.append(Buffer(
         byteLength=len(blob)
@@ -91,15 +91,15 @@ def save_textures(output: str, textures: Dict[str, PILImage.Image]):
         textures[texture_name].close()
         textures[texture_name] = None
 
-def to_glb(dme: DME, output: str, manager: AssetManager, dme_name: str):
-    gltk, blob, textures = dme_to_gltf(dme, manager, dme_name, str(Path(output).stem))
+def to_glb(dme: DME, output: str, manager: AssetManager, dme_name: str, include_skeleton: bool = True):
+    gltk, blob, textures = dme_to_gltf(dme, manager, dme_name, str(Path(output).stem), include_skeleton)
     gltk.set_binary_blob(blob)
     gltk.save_binary(output)
     save_textures(output, textures)
 
 
-def to_gltf(dme: DME, output: str,  manager: AssetManager, dme_name: str):
-    gltk, blob, textures = dme_to_gltf(dme, manager, dme_name, str(Path(output).stem))
+def to_gltf(dme: DME, output: str,  manager: AssetManager, dme_name: str, include_skeleton: bool = True):
+    gltk, blob, textures = dme_to_gltf(dme, manager, dme_name, str(Path(output).stem), include_skeleton)
     blobpath = Path(output).with_suffix(".bin")
     with open(blobpath, "wb") as blob_out:
         blob_out.write(blob)
@@ -136,6 +136,7 @@ def main():
     parser.add_argument("--material-hashes", "-m", type=int, nargs="+", help="The name hash(es) of the materials to use for each mesh when loading the DME data")
     parser.add_argument("--dump-textures", "-t", action="store_true", help="Dump the filenames of the textures used by the model to stdout and exit")
     parser.add_argument("--verbose", "-v", help="Increase log level, can be specified multiple times", action="count", default=0)
+    parser.add_argument("--no-skeleton", "-n", action="store_true", help="Exclude skeleton from generated mesh", default=False)
     args = parser.parse_args()
 
     logging.basicConfig(level=max(logging.WARNING - 10 * args.verbose, logging.DEBUG), handlers=[handler])
@@ -170,9 +171,9 @@ def main():
         elif args.format == "stl":
             to_stl(dme, str(tmp_output_path))
         elif args.format == "glb":
-            to_glb(dme, str(tmp_output_path), manager, Path(args.input_file).name)
+            to_glb(dme, str(tmp_output_path), manager, Path(args.input_file).name, not args.no_skeleton)
         elif args.format == "gltf":
-            to_gltf(dme, str(tmp_output_path), manager, Path(args.input_file).name)
+            to_gltf(dme, str(tmp_output_path), manager, Path(args.input_file).name, not args.no_skeleton)
 
         os.replace(tmp_output_path, output_path)
     except FileNotFoundError:

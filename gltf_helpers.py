@@ -28,7 +28,7 @@ SUFFIX_TO_TYPE = {
 
 texture_name_to_indices = {}
 
-def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[int, List[int]], textures: Dict[str, PILImage.Image], image_indices: Dict[str, int], offset: int, blob: bytes, dme_name: str) -> Tuple[int, bytes]:
+def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[int, List[int]], textures: Dict[str, PILImage.Image], image_indices: Dict[str, int], offset: int, blob: bytes, dme_name: str, include_skeleton: bool = True) -> Tuple[int, bytes]:
     global texture_name_to_indices
     if len(gltf.samplers) == 0:
         gltf.samplers.append(Sampler(magFilter=LINEAR, minFilter=LINEAR))
@@ -148,7 +148,7 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
         material_index = mesh_materials[i]
         offset, blob = add_mesh_to_gltf(gltf, dme, mesh, material_index, offset, blob)
     
-    if len(dme.bones) > 0:
+    if len(dme.bones) > 0 and include_skeleton:
         offset, blob = add_skeleton_to_gltf(gltf, dme, offset, blob)
     
     return offset, blob

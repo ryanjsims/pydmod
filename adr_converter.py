@@ -88,6 +88,7 @@ def main():
     parser.add_argument("--format", "-f", choices=["gltf", "glb"], help="The output format to use, required for conversion")
     parser.add_argument("--live", "-l", action="store_true", help="Load assets from live server rather than test")
     parser.add_argument("--verbose", "-v", help="Increase log level, can be specified multiple times", action="count", default=0)
+    parser.add_argument("--no-skeleton", "-n", action="store_true", help="Exclude skeleton from generated mesh", default=False)
     args = parser.parse_args()
 
     logging.basicConfig(level=max(logging.WARNING - 10 * args.verbose, logging.DEBUG), handlers=[handler])
@@ -97,9 +98,9 @@ def main():
 
         dme = dme_from_adr(manager, args.input_file)
         if args.format == "gltf":
-            to_gltf(dme, args.output_file, manager, dme.name)
+            to_gltf(dme, args.output_file, manager, dme.name, not args.no_skeleton)
         elif args.format == "glb":
-            to_glb(dme, args.output_file, manager, dme.name)
+            to_glb(dme, args.output_file, manager, dme.name, not args.no_skeleton)
 
 
 if __name__ == "__main__":
