@@ -9,11 +9,7 @@ import os
 import struct
 import zlib
 
-def read_cstr(data: BytesIO) -> str:
-    value = data.read(1)
-    while value[-1] != 0:
-        value += data.read(1)
-    return str(value.strip(b'\0'), encoding='utf-8')
+from utils import read_cstr
 
 def read_netstr(data: BytesIO) -> str:
     count, length = 0, 0

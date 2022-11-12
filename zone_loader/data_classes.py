@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from io import BytesIO
 from typing import List, Tuple
 
+from utils import read_cstr
+
 logger = logging.getLogger("zone_loader")
 
 @dataclass
@@ -97,18 +99,6 @@ class Header:
             start_x, start_y,
             chunks_x, chunks_y
         )
-
-def read_cstr(data: BytesIO) -> str:
-    value = data.read(1)
-    while value[-1] != 0:
-        value += data.read(1)
-    try:
-        string = str(value.strip(b'\0'), encoding='utf-8')
-    except UnicodeDecodeError as e:
-        display = value.strip(b'\0')
-        logger.error(f"Failed to decode bytes {display}")
-        raise e
-    return string
 
 @dataclass
 class TexturePart:
