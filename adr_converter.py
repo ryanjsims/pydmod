@@ -34,6 +34,13 @@ def get_base_model(root: ET.Element) -> Optional[Tuple[str, str]]:
         return None
     return base.get("fileName"), base.get("paletteName")
 
+def get_animation_network(root: ET.Element) -> Optional[str]:
+    anim_network = root.find("AnimationNetwork")
+    if anim_network is None:
+        logger.warning("No AnimationNetwork present in Actor Runtime file")
+        return None
+    return anim_network.get("fileName")
+
 def dme_from_adr(manager: AssetManager, adr_file: str) -> Optional[DME]:
     logger.info(f"Loading ADR file {adr_file}...")
     try:

@@ -143,7 +143,7 @@ class Mesh:
         del self.indices
 
     def __str__(self) -> str:
-        return f"Mesh (vertex count {len(self.vertices)} draw calls {len(self.draw_calls)} indices {len(self.indices)})"
+        return f"Mesh (vertex count {len(self.vertices[0])} draw offset {self.draw_offset} indices {len(self.indices)})"
     
     def serialize(self) -> bytes:
         if not self.__serialized:
@@ -543,7 +543,7 @@ class DME:
     aabb: AABB
     meshes: List[Mesh]
     
-    def __init__(self, magic: str, version: int, dmat: DMAT, aabb: AABB, meshes: List[Mesh], draw_calls: List[DrawCall], bone_map: Dict[int, int], bones: List[Bone]):
+    def __init__(self, magic: str, version: int, dmat: DMAT, aabb: AABB, meshes: List[Mesh], draw_calls: List[DrawCall], bone_map: Dict[int, int], bones: List[Bone], bone_map_entries: List[BoneMapEntry], bone_map2: Dict[int, int]):
         assert magic == "DMOD", "Not a DME file"
         assert version == 4, "Unsupported DME version"
         self.magic = magic
@@ -554,6 +554,8 @@ class DME:
         self.draw_calls = draw_calls
         self.bone_map = bone_map
         self.bones = bones
+        self.bone_map_entries = bone_map_entries
+        self.bone_map2 = bone_map2
 
     def close(self):
         self.dmat.close()
@@ -613,7 +615,15 @@ class DME:
         bone_map_entry_count = struct.unpack("<I", data.read(4))[0]
         logger.info(f"Loading {bone_map_entry_count} bone map entries")
         bone_map_entries = [BoneMapEntry.load(data) for _ in range(bone_map_entry_count)]
-        bone_map = {entry.global_index: entry.bone_index for entry in bone_map_entries}
+        bone_map = {}
+        bone_map2 = {}
+        for entry in bone_map_entries:
+            if entry.global_index in bone_map:
+                bone_map[entry.global_index + 64] = entry.bone_index
+                bone_map2[entry.global_index] = entry.bone_index
+            else:
+                bone_map[entry.global_index] = entry.bone_index
+        #bone_map = {entry.global_index + (64 if i > 63 else 0): entry.bone_index for i, entry in enumerate(bone_map_entries)}
 
         bones_count = struct.unpack("<I", data.read(4))[0]
         logger.info(f"Loading {bones_count} bones")
@@ -638,4 +648,4 @@ class DME:
             bone.namehash = struct.unpack("<I", data.read(4))[0]
         
         logger.info("DME file loaded")
-        return cls(magic.decode("utf-8"), version, dmat, aabb, meshes, draw_calls, bone_map, bones)
+        return cls(magic.decode("utf-8"), version, dmat, aabb, meshes, draw_calls, bone_map, bones, bone_map_entries, bone_map2)

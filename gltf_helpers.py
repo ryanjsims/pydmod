@@ -146,7 +146,19 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
     for i, mesh in enumerate(dme.meshes):
         logger.info(f"Writing mesh {i + 1} of {len(dme.meshes)}")
         material_index = mesh_materials[i]
+        swapped = False
+        if len(dme.bone_map2) > 0 and i == 1:
+            logger.warning("Swapping around bone maps since there were bones with the same index in the dme bone map entries.")
+            logger.warning("Theoretically this should only happen for high bone count models (Colossus is one)")
+            swapped = True
+            temp = dme.bone_map
+            dme.bone_map = dme.bone_map2
+            dme.bone_map2 = temp
         offset, blob = add_mesh_to_gltf(gltf, dme, mesh, material_index, offset, blob)
+        if swapped:
+            dme.bone_map2 = dme.bone_map
+            dme.bone_map = temp
+
     
     if len(dme.bones) > 0 and include_skeleton:
         offset, blob = add_skeleton_to_gltf(gltf, dme, offset, blob)
@@ -321,7 +333,8 @@ def add_mesh_to_gltf(gltf: GLTF2, dme: DME, mesh: DMEMesh, material_index: int, 
     
     if len(mesh.skin_indices) > 0:
         attributes.append([JOINTS_0, len(gltf.accessors)])
-        dme.bone_map[63] = 0
+        if 63 not in dme.bone_map:
+            dme.bone_map[63] = 0
         skin_indices = list(map(lambda x: [dme.bone_map[val] for val in x], mesh.skin_indices))
         skin_indices_bin = numpy.array(skin_indices, dtype=numpy.ubyte).flatten().tobytes()
         gltf.accessors.append(Accessor(
