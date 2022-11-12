@@ -82,12 +82,16 @@ class Skeleton:
         while read_data == b'\xCD':
             read_data = data.read(1)
         read_data += data.read(3)
-        assert read_data == b'\xFF\xFF\x0E\x00'
-        data.read(4)
+        assert read_data == b'\xFF\xFF\x0E\x00', f"Offset: {data.tell()}\nData: {read_data}"
+        data.read(4) # More 0xCD pad bytes
+
+        # This is probably a header of some kind for the transform data, but that needs more research
         read_data = data.read(128)
         if read_data[-4:] != b'\xcd\xcd\xcd\xcd':
             read_data = data.read(16)
             assert b'\xcd\xcd\xcd\xcd' in read_data
+        
+        # Offset and rotation vectors are in 2 data blocks, each padded out to be a multiple of 64 bytes in size
         start_pos = data.tell()
         offsets = [struct.unpack("<ffff", data.read(16)) for _ in range(skeleton_length)]
         amount_read = data.tell() - start_pos
@@ -96,6 +100,7 @@ class Skeleton:
             assert read_data == b'\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd', f"Offset: {data.tell()}\nData: {read_data}"
             amount_read += 16
         rotations = [struct.unpack("<ffff", data.read(16)) for _ in range(skeleton_length)]
+        
         bones = [Bone(bone_names[i], numpy.array(offsets[i], dtype=numpy.float32), Rotation.from_quat(rotations[i]), []) for i in range(len(bone_names))]
         logger.info(f"Loaded skeleton {bones[1].name}")
         return cls(hierarchy, indices, variable_length_unknowns, constant_length_unknowns, bones, offsets, rotations)
