@@ -1,7 +1,8 @@
-from .data_classes import MRN, Skeleton, BoneHierarchyEntry
+from .data_classes import MRN, Skeleton, BoneHierarchyEntry, Bone
 
 __ALL__ = [
     MRN,
     Skeleton,
-    BoneHierarchyEntry
+    BoneHierarchyEntry,
+    Bone
 ]

@@ -1,4 +1,28 @@
+from pathlib import Path
+import sys
+sys.path.append(str(Path(".").resolve()))
+
 from dme_loader.jenkins import oaat
+from mrn_loader import MRN, Bone
+from export_manager import ExportManager
+from multiprocessing.pool import Pool
+
+from glob import glob
+from io import BytesIO
+from typing import List
+
+import logging
+
+logger = logging.getLogger("Bone Processor")
+
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(
+    fmt="[%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+))
+
+logging.basicConfig(level=logging.INFO, handlers=[handler])
+
 
 HIERARCHY = {
     "AXLEBACK": "",
@@ -272,7 +296,7 @@ HIERARCHY = {
     "L_TOP_CANNISTER02": "",
     "L_TOP_CANNISTER03": "",
     "L_UPPERSUSPENSION": "",
-    "L_VENT": "",
+    "L_VENT": "COG",
     "L_VENT_END": "L_VENT",
     "L_WEAPON": "L_WRIST",
     "L_WHEEL1": "COG",
@@ -538,7 +562,7 @@ HIERARCHY = {
     "R_TOP_CANNISTER02": "",
     "R_TOP_CANNISTER03": "",
     "R_UPPERSUSPENSION": "",
-    "R_VENT": "",
+    "R_VENT": "COG",
     "R_VENT_END": "R_VENT",
     "R_WEAPON": "R_WRIST",
     "R_WHEEL1": "COG",
@@ -621,24 +645,56 @@ HIERARCHY = {
     "YAWRECOIL": "YAW",
 }
 
-with open("bonelist.txt") as f:           
-    bones = f.read().upper().split()
 
-uniq_bones = sorted(list(set(bones)))
-with open("ps2_bone_map.py", "w") as f:
-    f.write("BONE_HASHMAP = {\n")
-    for bone in uniq_bones:
-        f.write(f'    {oaat(bone.encode("utf-8"))}: "{bone}",\n')
-    f.write("}\n\n")
-    f.write("HIERARCHY = {\n")
-    for bone in uniq_bones:
-        if bone in HIERARCHY and HIERARCHY[bone] is not None:
-            f.write(f'    "{bone}": "{HIERARCHY[bone]}",\n')
-        elif bone.endswith("_END"):
-            f.write(f'    "{bone}": "{bone[:-4]}",\n')
-        elif bone in HIERARCHY and HIERARCHY[bone] is None:
-            f.write(f'    "{bone}": None,\n')
-        else:
-            f.write(f'    "{bone}": "",\n')
+def main():
+    bones: List[str] = []
+    with open("utilscripts/mrn_list.txt") as f:
+        mrn_names = f.read().split()
 
-    f.write("}\n\n")
+    server = "C:/Users/Public/Daybreak Game Company/Installed Games/PlanetSide 2 Test/Resources/Assets/"
+
+    paths = [Path(p) for p in glob(server + "assets_x64*.pack2")]
+
+    with Pool(8) as p:
+        logger.info("Loading packs...")
+        manager = ExportManager(paths, None, p)
+        manager.loaded.wait()
+        logger.info("Loaded.")
+
+    def add_skeleton(root: Bone):
+        for child in root.children:
+            if child.name.upper() in HIERARCHY and HIERARCHY[child.name.upper()] == "" or child.name.upper() not in HIERARCHY:
+                HIERARCHY[child.name.upper()] = root.name.upper()
+            add_skeleton(child)
+
+    mrns: List[MRN] = []
+    for name in mrn_names:
+        try:
+            mrns.append(MRN.load(BytesIO(manager.get_raw(name).get_data())))
+            for skeleton in mrns[-1].skeletons:
+                skeleton.build_recursive()
+                for bone in skeleton.bones:
+                    bones.append(bone.name.upper())
+                add_skeleton(skeleton.bones[2])
+        except Exception as e:
+            logger.error(f"Loading {name}: {e}")
+
+    uniq_bones = sorted(list(set(bones)))
+    with open("ps2_bone_map.py", "w") as f:
+        f.write("BONE_HASHMAP = {\n")
+        for bone in uniq_bones:
+            f.write(f'    {oaat(bone.encode("utf-8"))}: "{bone}",\n')
+        f.write("}\n\n")
+        f.write("HIERARCHY = {\n")
+        for bone in uniq_bones:
+            if bone in HIERARCHY and HIERARCHY[bone] is not None:
+                f.write(f'    "{bone}": "{HIERARCHY[bone]}",\n')
+            elif bone.endswith("_END"):
+                f.write(f'    "{bone}": "{bone[:-4]}",\n')
+            elif bone in HIERARCHY and HIERARCHY[bone] is None:
+                f.write(f'    "{bone}": None,\n')
+
+        f.write("}\n\n")
+    
+if __name__ == "__main__":
+    main()
