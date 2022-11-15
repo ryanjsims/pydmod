@@ -115,8 +115,8 @@ def get_manager(pool: multiprocessing.pool.Pool, live: bool = False) -> AssetMan
     global manager
     if manager is not None:
         return manager
-    test_server = Path(r"/mnt/e/Users/Public/Daybreak Game Company/Installed Games/PlanetSide 2 Test/Resources/Assets")
-    live_server = Path(r"/mnt/c/Users/Public/Daybreak Game Company/Installed Games/PlanetSide 2/Resources/Assets")
+    test_server = Path(r"C:/Users/Public/Daybreak Game Company/Installed Games/PlanetSide 2 Test/Resources/Assets")
+    live_server = Path(r"C:/Users/Public/Daybreak Game Company/Installed Games/PlanetSide 2/Resources/Assets")
     server = test_server if not live else live_server
     if not server.exists():
         logger.error(f"Installation not found at expected location! Please update path in {__file__} to extract textures automatically!")
