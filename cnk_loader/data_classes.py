@@ -5,6 +5,7 @@ from io import SEEK_END, SEEK_SET, BytesIO
 from typing import List, Tuple, Union
 from cnkdec import Decompressor
 from PIL import Image, ImageChops
+from aabbtree import AABB
 
 logger = logging.getLogger("cnk_loader")
 
@@ -171,9 +172,11 @@ class CNK0:
     verts: List[Tuple[float, float, float]]
     uvs: List[Tuple[float, float]]
     triangles: List[List[int]]
-    aabb: Tuple[Tuple[float, float, float], Tuple[float, float, float]]
+    aabb: AABB
 
     def calculate_verts(self):
+        if len(self.triangles) > 0:
+            return
         minimum, maximum = None, None
         for i in range(len(self.render_batches)):
             for j in range(self.render_batches[i].vertex_count):
@@ -183,16 +186,20 @@ class CNK0:
                 heightNear = float(self.vertices[offset].height_near / 32)
 
                 self.verts.append((x, heightNear, z))
-                if minimum is None or self.verts[-1][0] < minimum[0] and self.verts[-1][1] < minimum[1] and self.verts[-1][2] < minimum[2]:
+                if minimum is None:
                     minimum = self.verts[-1]
-                if maximum is None or self.verts[-1][0] > maximum[0] and self.verts[-1][1] > maximum[1] and self.verts[-1][2] > maximum[2]:
+                else:
+                    minimum = (min(minimum[0], self.verts[-1][0]), min(minimum[1], self.verts[-1][1]), min(minimum[2], self.verts[-1][2]))
+                if maximum is None:
                     maximum = self.verts[-1]
+                else:
+                    maximum = (max(maximum[0], self.verts[-1][0]), max(maximum[1], self.verts[-1][1]), max(maximum[2], self.verts[-1][2]))
                 self.uvs.append((((z / 128) / 2) + 1, (-(1 - x / 128) + 1) / 2 + 1))
             
             self.triangles.append([0] * self.render_batches[i].index_count)
             for j in range(self.render_batches[i].index_count):
                 self.triangles[i][self.render_batches[i].index_count - 1 - j] = self.indices[j + self.render_batches[i].index_offset] + self.render_batches[i].vertex_offset
-        self.aabb = (minimum if minimum is not None else (0, 0, 0), maximum if maximum is not None else (0, 0, 0))
+        self.aabb = AABB(list(zip(minimum if minimum is not None else (0, 0, 0), maximum if maximum is not None else (0, 0, 0))))
 
     @classmethod
     def load(cls, data: BytesIO) -> 'CNK0':

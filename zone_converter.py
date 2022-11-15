@@ -1,3 +1,4 @@
+from aabbtree import AABB
 from argparse import ArgumentParser
 from dataclasses import astuple
 from DbgPack import AssetManager
@@ -11,6 +12,7 @@ from scipy.spatial.transform import Rotation
 import logging
 import multiprocessing
 import multiprocessing.pool
+import numpy
 
 from adr_converter import dme_from_adr
 from cnk_loader import ForgelightChunk, CNK1
@@ -43,15 +45,15 @@ def get_manager(pool: multiprocessing.pool.Pool, live: bool = False) -> AssetMan
         logger.info("Loading game assets asynchronously...")
         manager = AssetManager(
             [Path(p) for p in glob(str(server) + "/assets_x64_*.pack2")]
-            # + [Path(p) for p in glob(str(server) + "/Amerish_x64_*.pack2")]
-            + [Path(p) for p in glob(str(server) + "/Cleanroom_x64_*.pack2")]
-            # + [Path(p) for p in glob(str(server) + "/Esamir_x64_*.pack2")]
-            # + [Path(p) for p in glob(str(server) + "/Hossin_x64_*.pack2")]
-            # + [Path(p) for p in glob(str(server) + "/Indar_x64_*.pack2")]
+            + [Path(p) for p in glob(str(server) + "/Amerish_x64_*.pack2")]
+            # + [Path(p) for p in glob(str(server) + "/Cleanroom_x64_*.pack2")]
+            + [Path(p) for p in glob(str(server) + "/Esamir_x64_*.pack2")]
+            + [Path(p) for p in glob(str(server) + "/Hossin_x64_*.pack2")]
+            + [Path(p) for p in glob(str(server) + "/Indar_x64_*.pack2")]
             + [Path(p) for p in glob(str(server) + "/nexus_x64_*.pack2")]
             + [Path(p) for p in glob(str(server) + "/Oshur_x64_*.pack2")]
-            + [Path(p) for p in glob(str(server) + "/quickload_x64_*.pack2")]
-            # + [Path(p) for p in glob(str(server) + "/Sanctuary_x64_*.pack2")]
+            # + [Path(p) for p in glob(str(server) + "/quickload_x64_*.pack2")]
+            + [Path(p) for p in glob(str(server) + "/Sanctuary_x64_*.pack2")]
             + [Path(p) for p in glob(str(server) + "/VR_x64_*.pack2")],
             p = pool
         )
@@ -140,7 +142,13 @@ def main():
     parser.add_argument("--actors-enabled", "-a", help="Loads static actor files as models (buildings, trees, etc)", action="store_true")
     parser.add_argument("--lights-enabled", "-i", help="Adds lights to the output file", action="store_true")
     parser.add_argument("--live", "-l", help="Loads live assets rather than test", action="store_true")
+    parser.add_argument("--bounding-box", "-b", help="The x1 z1 x2 z2 bounding box of the zone that should be loaded. Loads any object with a bounding box that intersects", nargs=4, type=float)
     args = parser.parse_args()
+
+    bounding_box = None
+    if args.bounding_box is not None:
+        bounding_box = AABB(((args.bounding_box[0], args.bounding_box[2]), (0.0, 1000.0), (args.bounding_box[1], args.bounding_box[3])))
+        logger.info(f"Using bounding box {bounding_box}")
 
     if not (args.terrain_enabled or args.actors_enabled or args.lights_enabled):
         parser.error("No model/light loading enabled! Use either/all of -a, -t, or -i to load models and/or lights")
@@ -190,10 +198,20 @@ def main():
         ))
         for x in range(zone.header.start_x, zone.header.start_x + zone.header.chunks_x, 4):
             for y in range(zone.header.start_y, zone.header.start_y + zone.header.chunks_y, 4):
+                transformed_aabb = AABB((
+                    (-256.0 + 64.0 * (y + 4), 64.0 * (y + 4)), 
+                    (0.0, 1000.0), 
+                    (-256.0 + 64.0 * (x + 4), 64.0 * (x + 4))
+                ))
+                if bounding_box is not None and not bounding_box.overlaps(transformed_aabb):
+                    # Bounding box specified does not contain any part of the chunk, skip
+                    logger.debug("Chunk not contained in requested bounding box, skipping!")
+                    continue
                 chunk_name = f"{Path(args.input_file).stem}_{x}_{y}.cnk0"
                 chunk_texture_name = f"{Path(args.input_file).stem}_{x}_{y}.cnk1"
                 logger.info(f" - {chunk_name} - ")
                 chunk = ForgelightChunk.load(BytesIO(manager.get_raw(chunk_name).get_data()))
+                chunk.calculate_verts()
                 chunk_lod = ForgelightChunk.load(BytesIO(manager.get_raw(chunk_texture_name).get_data()))
                 
                 assert type(chunk_lod) == CNK1
@@ -218,21 +236,49 @@ def main():
                 logger.warning(f"Skipping {object.actor_file}...")
                 continue
 
+            instances_to_add = [True] * len(object.instances)
+            if bounding_box is not None:
+                for i, instance in enumerate(object.instances):
+                    translation = numpy.array(astuple(instance.translation)[:3])
+                    rot = Rotation.from_quat(get_gltf_rotation(astuple(instance.rotation)[:3]))
+                    scale = numpy.array(astuple(instance.scale)[:3])
+                    maximum, minimum = None, None
+                    for corner in dme.aabb.corners:
+                        transformed = translation + rot.apply(scale * numpy.array(corner))
+                        if maximum is None:
+                            maximum = transformed
+                        else:
+                            maximum = (max(maximum[0], transformed[0]), max(maximum[1], transformed[1]), max(maximum[2], transformed[2]))
+                        
+                        if minimum is None:
+                            minimum = transformed
+                        else:
+                            minimum = (min(minimum[0], transformed[0]), min(minimum[1], transformed[1]), min(minimum[2], transformed[2]))
+                    transformed_bbox = AABB(list(zip(minimum, maximum)))
+                    instances_to_add[i] = bounding_box.overlaps(transformed_bbox)
+
+            if not any(instances_to_add):
+                logger.info(f"Skipping {object.actor_file} since no instances are within the bounding box.")
+                continue
+
             node_start = len(gltf.nodes)
-            offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, image_indices, offset, blob, object.actor_file)
+            offset, blob = append_dme_to_gltf(gltf, dme, manager, mats, textures, image_indices, offset, blob, object.actor_file, include_skeleton=False)
             node_end = len(gltf.nodes)
 
             logger.info(f"Adding {len(object.instances)} instances of {object.actor_file}")
             instances = []
+            original_nodes_consumed = False
             for i, instance in enumerate(object.instances):
-                #print(repr(i))
-                if i > 0:
+                if not instances_to_add[i]:
+                    continue
+                if original_nodes_consumed:
                     children = []
                     for i in range(node_start, node_end):
                         children.append(len(gltf.nodes))
                         gltf.nodes.append(Node(mesh=gltf.nodes[i].mesh))
                 else:
                     children = list(range(node_start, node_end))
+                    original_nodes_consumed = True
                 rot = get_gltf_rotation(astuple(instance.rotation)[:3])
                 instances.append(len(gltf.nodes))
                 gltf.nodes.append(Node(
@@ -256,6 +302,12 @@ def main():
         light_def_to_index = {}
         logger.info(f"Adding {len(zone.lights)} lights to the scene...")
         for light in zone.lights:
+            if bounding_box is not None:
+                light_aabb = AABB(list(zip(astuple(light.translation), astuple(light.translation))))
+                if not bounding_box.overlaps(light_aabb):
+                    logger.debug("Skipping light outside of bounding box...")
+                    continue
+
             light_nodes.append(len(gltf.nodes))
             light_def = {
                 "color": [light.color_val.r / 255.0, light.color_val.g / 255.0, light.color_val.b / 255.0],

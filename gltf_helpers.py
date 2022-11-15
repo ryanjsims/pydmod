@@ -30,7 +30,9 @@ texture_name_to_indices = {}
 
 def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[int, List[int]], textures: Dict[str, PILImage.Image], image_indices: Dict[str, int], offset: int, blob: bytes, dme_name: str, include_skeleton: bool = True) -> Tuple[int, bytes]:
     global texture_name_to_indices
-    if len(gltf.samplers) == 0:
+    sampler = 0
+    if len(gltf.samplers) == 0 or gltf.samplers[sampler].wrapS != REPEAT:
+        sampler = len(gltf.samplers)
         gltf.samplers.append(Sampler(magFilter=LINEAR, minFilter=LINEAR))
     texture_groups_dict = {}
     atlas_set = set()
@@ -54,7 +56,7 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
     for name in texture_groups:
         for suffix in ["_C.dds", "_N.dds", "_S.dds"]:
             if str(Path(name + suffix).with_suffix(".png")) not in textures:
-                load_texture(manager, gltf, textures, name + suffix, image_indices)
+                load_texture(manager, gltf, textures, name + suffix, image_indices, sampler)
         mat_info_entry = {"base": None, "met": None, "norm": None, "emis": None}
         for suffix in ["_C.png", "_MR.png", "_N.png", "_E.png"]:
             if (name + suffix) not in image_indices:
@@ -82,7 +84,7 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
             atlas_texture = texture_name_to_indices[str(Path(atlas).with_suffix(".png"))]
             continue
         atlas_texture = len(gltf.textures)
-        load_texture(manager, gltf, textures, atlas, image_indices)
+        load_texture(manager, gltf, textures, atlas, image_indices, sampler)
     
     mesh_materials = []
     assert len(dme.meshes) == len(dme.dmat.materials), "Mesh count != material count"
@@ -165,7 +167,7 @@ def append_dme_to_gltf(gltf: GLTF2, dme: DME, manager: AssetManager, mats: Dict[
     
     return offset, blob
 
-def unpack_specular(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage.Image, name: str, texture_indices: Dict[str, int]):
+def unpack_specular(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage.Image, name: str, texture_indices: Dict[str, int], sampler: int = 0):
     metallic = im.getchannel("R")
     roughness = im.getchannel("A")
     metallicRoughness = PILImage.merge("RGB", [metallic, roughness, metallic])
@@ -184,15 +186,15 @@ def unpack_specular(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILI
     ename = name[:-5] + "E.png"
     textures[ename] = emissive
     texture_indices[ename] = len(gltf.textures)
-    gltf.textures.append(Texture(source=len(gltf.images), sampler=0, name=ename))
+    gltf.textures.append(Texture(source=len(gltf.images), sampler=sampler, name=ename))
     gltf.images.append(Image(uri="textures" + os.sep + ename))
     mrname = name[:-5] + "MR.png"
     textures[mrname] = metallicRoughness
     texture_indices[mrname] = len(gltf.textures)
-    gltf.textures.append(Texture(source=len(gltf.images), sampler=0, name=mrname))
+    gltf.textures.append(Texture(source=len(gltf.images), sampler=sampler, name=mrname))
     gltf.images.append(Image(uri="textures" + os.sep + mrname))
 
-def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage.Image, name: str, texture_indices: Dict[str, int]):
+def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage.Image, name: str, texture_indices: Dict[str, int], sampler: int = 0):
     is_packed = True
     if is_packed:
         #Blue channel is not all >= 0.5, so its not a regular normal map
@@ -207,7 +209,7 @@ def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage
     normal_name = str(Path(name).with_suffix(".png"))
     textures[normal_name] = normal
     texture_indices[normal_name] = len(gltf.textures)
-    gltf.textures.append(Texture(source=len(gltf.images), sampler=0, name=normal_name))
+    gltf.textures.append(Texture(source=len(gltf.images), sampler=sampler, name=normal_name))
     gltf.images.append(Image(uri="textures" + os.sep + normal_name))
 
 
@@ -219,7 +221,7 @@ def unpack_normal(gltf: GLTF2, textures: Dict[str, PILImage.Image], im: PILImage
         tints_name = normal_name[:-5] + "T.png"
         textures[tints_name] = tints
         texture_indices[tints_name] = len(gltf.textures)
-        gltf.textures.append(Texture(source=len(gltf.images), sampler=0, name=tints_name))
+        gltf.textures.append(Texture(source=len(gltf.images), sampler=sampler, name=tints_name))
         gltf.images.append(Image(uri="textures" + os.sep + tints_name))
 
 def add_mesh_to_gltf(gltf: GLTF2, dme: DME, mesh: DMEMesh, material_index: int, offset: int, blob: bytes) -> Tuple[int, bytes]:
@@ -564,7 +566,7 @@ def add_chunk_to_gltf(gltf: GLTF2, chunk: CNK0, material_index: int, offset: int
 
     return offset, blob
 
-def load_texture(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImage.Image], name: str, texture_indices: Dict[str, int]):
+def load_texture(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImage.Image], name: str, texture_indices: Dict[str, int], sampler: int=0):
     texture = manager.get_raw(name)
     if texture is None:
         logger.warning(f"Could not find {name} in loaded game assets, skipping...")
@@ -573,10 +575,10 @@ def load_texture(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImag
 
     im = PILImage.open(BytesIO(texture.get_data()))
     if re.match(".*_(s|S).dds", name):
-        unpack_specular(manager, gltf, textures, im, name, texture_indices)
+        unpack_specular(manager, gltf, textures, im, name, texture_indices, sampler)
         return
     elif re.match(".*_(n|N).dds", name):
-        unpack_normal(gltf, textures, im, name, texture_indices)
+        unpack_normal(gltf, textures, im, name, texture_indices, sampler)
         return
     elif re.match(".*_(c|C).dds", name):
         #gltf.textures[min(CNS_seen) * 4].name = name
@@ -587,5 +589,5 @@ def load_texture(manager: AssetManager, gltf: GLTF2, textures: Dict[str, PILImag
         texture_indices[str(Path(name).with_suffix(".png"))] = len(gltf.images)
         name = str(Path(name).with_suffix(".png"))
         textures[name] = im
-    gltf.textures.append(Texture(source=len(gltf.images), sampler=0, name=name))
+    gltf.textures.append(Texture(source=len(gltf.images), sampler=sampler, name=name))
     gltf.images.append(Image(uri="textures" + os.sep + name))
