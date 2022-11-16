@@ -13,7 +13,7 @@ from glob import glob
 from DbgPack import AssetManager
 
 from dme_loader import DME
-from gltf_helpers import *
+from utils.gltf_helpers import *
 
 logger = logging.getLogger("DME Converter")
 

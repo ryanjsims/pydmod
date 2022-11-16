@@ -17,7 +17,7 @@ import numpy
 from adr_converter import dme_from_adr
 from cnk_loader import ForgelightChunk, CNK1
 from dme_converter import append_dme_to_gltf, save_textures
-from gltf_helpers import add_chunk_to_gltf
+from utils.gltf_helpers import add_chunk_to_gltf
 from zone_loader import Zone
 from zone_loader.data_classes import LightType
 
