@@ -3,7 +3,7 @@ import struct
 from argparse import ArgumentParser
 from dme_loader import DME, D3DXParamClass, D3DXParamType, jenkins
 from numpy import matrix
-from english_words import english_words_lower_alpha_set as words
+# from english_words import english_words_lower_alpha_set as words
 
 import logging
 
