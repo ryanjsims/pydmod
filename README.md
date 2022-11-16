@@ -41,7 +41,6 @@ This repo contains several scripts that allow the conversion of forgelight ADR/D
   alt="Skeleton example" 
   title="Liberator, TR Base Body, TR Heavy Assault Armor, Caucasian Male Head, and AVA Dragoon Helmet models exported with skeletons"
   width=60%
-  style="margin-left: 20%; margin-right: 20%"
 />
 * Character models have their bones named such that they can immediately be applied to a Blender [Rigify](https://docs.blender.org/manual/en/3.3/addons/rigging/rigify/index.html) generated IK/FK rig.
 * Models can be exported without a skeleton if that is desirable
@@ -51,7 +50,6 @@ This repo contains several scripts that allow the conversion of forgelight ADR/D
   alt="Indar center chunk example" 
   title="Indar.zone exported with a bounding box of (-256, -256) to (256, 512)"
   width=60%
-  style="margin-left: 20%; margin-right: 20%"
 />
 * Zones may be exported with or without terrain, static models, and lights using command line flags.
 
@@ -221,7 +219,6 @@ Exporting the center of Indar, as in this example from above:
   alt="Indar center chunk example" 
   title="Indar.zone exported with a bounding box of (-256, -256) to (256, 512)"
   width=30%
-  style="margin-left: 35%; margin-right: 35%"
 />
 ```bash
 python zone_converter.py -f glb -v Indar.zone ./models/zones/indar.glb -a -i -t -b -256 -256 256 512
