@@ -6,6 +6,8 @@ from pathlib import Path
 from export_manager import ExportManager
 from argparse import ArgumentParser
 
+from io import BytesIO
+
 logger = logging.getLogger("Open Pack Files")
 
 handler = logging.StreamHandler()
