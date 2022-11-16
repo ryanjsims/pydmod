@@ -1,22 +1,33 @@
 # Forgelight DME model converter
 
+## Table of Contents
+
+1. [Description](#description)
+2. [Installation](#installation)
+    1. [Compiling `cnk_loader` with Windows](#compiling-cnk_loader-from-windows)
+3. [Usage](#usage)
+
+## Description
+
 This repo contains several scripts that allow the conversion of forgelight DME/ADR/Zone models to STL, GLTF, or OBJ models for use in model viewing and rendering programs, as well as a python library that allows parsing of DME models which powers the conversion script. I made this to convert models to .glb format for import into Blender. 
 
 This software still has several issues. Only the basic C/N/S texture maps are used in 95% of exports, with a few atlases added in specific cases for control consoles and computer screens. Detail maps are not used. If the data strides listed in the DME file do not match the memory layout of the provided material, the tool will list materials that do match, and you may select the one to use depending on the mesh(es) being saved.
 
 Zones can take a while to export due to their size, and then importing the resulting GLTF files will take time as well. Since LOD0 meshes are exported, memory requirements for even small continents (IE Nexus or VR) can be large in Blender.
 
-## Installation (Linux)
+## Installation
 
 1. After cloning the repository, run `git submodule update --init` to pull in all the needed submodules.
-2. Create a virtual environment for the repository and activate it with `python3 -m venv venv && . venv/bin/activate`
-    * Windows: You'll need to run `./venv/bin/Activate.ps1` if you use powershell
-3. Run `pip install -r requirements.txt`
-4. Navigate to `./dbg-pack/` and run `pip install .`
-5. If you need terrain loading, navigate to `./cnk_loader/` and run `pip install .`
+2. Create a virtual environment for the repository with `python3 -m venv venv`
+3. Activate the virtual environment:
+    * Windows: `& ./venv/bin/Activate.ps1`
+    * Linux: `. venv/bin/activate`
+4. Run `pip install -r requirements.txt`
+5. Navigate to `./dbg-pack/` and run `pip install .`
+6. If you need terrain loading, navigate to `./cnk_loader/` and run `pip install .`
     * Windows: check below for extra instructions
 
-## Compiling `cnk_loader` from Windows
+### Compiling `cnk_loader` from Windows
 
 1. Install Visual Studio with the Desktop development with C++ and Python development workloads (VS2019 used when testing)
     * Python native development tools should be enabled
