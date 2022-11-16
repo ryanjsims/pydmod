@@ -5,7 +5,10 @@
 1. [Description](#description)
 2. [Installation](#installation)
     1. [Compiling `cnk_loader` with Windows](#compiling-cnk_loader-from-windows)
-3. [Usage](#usage)
+3. [Usage and Examples](#usage-and-examples)
+    1. [ADR Converter](#adr-converter)
+    2. [DME Converter](#dme-converter)
+    3. [Zone Converter](#zone-converter)
 
 ## Description
 
@@ -37,7 +40,8 @@ Zones can take a while to export due to their size, and then importing the resul
 5. Navigate to `./cnk_loader/`
 6. Run `pip install .` to install the library
 
-## Usage
+## Usage and Examples
+### ADR Converter
 ```
 usage: adr_converter.py [-h] [--format {gltf,glb}] [--live] [--verbose]
                         input_file output_file
@@ -56,6 +60,7 @@ optional arguments:
   --verbose, -v         Increase log level, can be specified multiple times
 ```
 
+### DME Converter
 ```
 usage: dme_converter.py [-h] [--output-file OUTPUT_FILE]
                         [--format {stl,gltf,obj,glb}]
@@ -81,4 +86,29 @@ optional arguments:
   --dump-textures, -t   Dump the filenames of the textures used by the model
                         to stdout and exit
   --verbose, -v         Increase log level, can be specified multiple times
+```
+
+### Zone Converter
+```
+usage: zone_converter.py [-h] [--format {gltf,glb}] [--verbose] [--skip-textures] [--terrain-enabled] [--actors-enabled] [--lights-enabled] [--live] [--bounding-box BOUNDING_BOX BOUNDING_BOX BOUNDING_BOX BOUNDING_BOX] input_file output_file
+
+A utility to convert Zone files to GLTF2 files
+
+positional arguments:
+  input_file            Path of the input Zone file, either already extracted or from game assets
+  output_file           Path of the output file
+
+options:
+  -h, --help            show this help message and exit
+  --format {gltf,glb}, -f {gltf,glb}
+                        The output format to use, required for conversion
+  --verbose, -v         Increase log level, can be specified multiple times
+  --skip-textures, -s   Skips saving textures
+  --terrain-enabled, -t
+                        Load terrain chunks as models into the result
+  --actors-enabled, -a  Loads static actor files as models (buildings, trees, etc)
+  --lights-enabled, -i  Adds lights to the output file
+  --live, -l            Loads live assets rather than test
+  --bounding-box BOUNDING_BOX BOUNDING_BOX BOUNDING_BOX BOUNDING_BOX, -b BOUNDING_BOX BOUNDING_BOX BOUNDING_BOX BOUNDING_BOX
+                        The x1 z1 x2 z2 bounding box of the zone that should be loaded. Loads any object with a bounding box that intersects
 ```
