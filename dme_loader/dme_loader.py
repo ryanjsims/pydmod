@@ -304,7 +304,6 @@ class Mesh:
         
         return cls(bpv_list, vertex_streams, vertices, colors, normals, binormals, tangents, uvs, skin_weights, skin_indices, index_size, indices, draw_offset, draw_count, bone_count)
         
-
 class D3DXParamType(IntEnum):
     VOID=           0
     BOOL=           1
@@ -542,6 +541,10 @@ class DME:
     dmat: DMAT
     aabb: AABB
     meshes: List[Mesh]
+    draw_calls: List[DrawCall]
+    bone_map: Dict[int, int]
+    bones: List[Bone]
+    bone_map_entries: List[BoneMapEntry]
     
     def __init__(self, magic: str, version: int, dmat: DMAT, aabb: AABB, meshes: List[Mesh], draw_calls: List[DrawCall], bone_map: Dict[int, int], bones: List[Bone], bone_map_entries: List[BoneMapEntry], bone_map2: Dict[int, int]):
         assert magic == "DMOD", "Not a DME file"
