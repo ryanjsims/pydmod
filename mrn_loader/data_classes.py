@@ -162,6 +162,36 @@ class Skeleton:
         return self.bones[1].name
 
 
+@dataclass
+class DeqFactors:
+    translation: List[Tuple[float, float, float, float, float, float]]
+    rotation: List[Tuple[float, float, float, float, float, float]]
+    scale: List[Tuple[float, float, float, float, float, float]]
+
+@dataclass
+class AnimationBoneIndices:
+    translation: List[int]
+    rotation: List[int]
+    scale: List[int]
+
+@dataclass
+class Animation:
+    crc32hash: int
+    version: int # Not actually sure if this is a version or not
+    unknown1: int
+    unknown2: int
+    unknown_float1: float
+    unknown_float2: float
+    unknown3: int
+    unknown4: int
+    static_bones: AnimationBoneIndices
+    dynamic_bones: AnimationBoneIndices
+    translation_init_factors: Tuple[float, float, float, float, float, float]
+    trs_anim_deq_counts: Tuple[int, int, int]
+    trs_anim_dec_factors: DeqFactors
+    
+
+
 class PacketType(IntEnum):
     skeleton = 0x01
     some_other_data = 0x02
