@@ -47,7 +47,6 @@ HIERARCHY = {
     "B_LEG_PISTON": "",
     "CAMERA": "",
     "CAMERA1_SOCKET": "",
-    "CAMERARECOIL": "",
     "CANNON_HOOD": "",
     "CANNON_HOOD_END": "CANNON_HOOD",
     "COG": "WORLDROOT",
@@ -218,7 +217,6 @@ HIERARCHY = {
     "L_PINKYB": "L_PINKYA",
     "L_PINKYC": "L_PINKYB",
     "L_PINKY_END": "L_PINKYC",
-    "L_PITCHRECOIL": "",
     "L_REARAXLE": "COG",
     "L_REARDOOR": "COG",
     "L_REARFLAP": "L_HIP",
@@ -358,8 +356,6 @@ HIERARCHY = {
     "MUZZLE1_SOCKET": "",
     "NECK": "SPINEUPPER",
     "PELVIS": "COG",
-    "PITCH": "YAW",
-    "PITCHRECOIL": "PITCH",
     "REARAXLE": "COG",
     "REARFANPIVOT": "",
     "REARFANTHRUST": "",
@@ -484,7 +480,6 @@ HIERARCHY = {
     "R_PINKYB": "R_PINKYA",
     "R_PINKYC": "R_PINKYB",
     "R_PINKY_END": "R_PINKYC",
-    "R_PITCHRECOIL": "",
     "R_REARAXLE": "COG",
     "R_REARDOOR": "COG",
     "R_REARFLAP": "R_HIP",
@@ -641,8 +636,6 @@ HIERARCHY = {
     "TAILVENTS": "TAIL",
     "TRAJECTORY": "",
     "WORLDROOT": None,
-    "YAW": "WORLDROOT",
-    "YAWRECOIL": "YAW",
 }
 
 
@@ -670,17 +663,20 @@ def main():
     mrns: List[MRN] = []
     for name in mrn_names:
         try:
-            mrns.append(MRN.load(BytesIO(manager.get_raw(name).get_data())))
+            logger.info(f"Loading {name}...")
+            if name.endswith(".mrn"):
+                mrns.append(MRN.load(BytesIO(manager.get_raw(name).get_data())))
+            else:
+                mrns.append(MRN.load(BytesIO(manager.get_by_namehash(int(name)).get_data())))
             for packet in mrns[-1].packets:
                 if packet.header.packet_type != PacketType.skeleton:
                     continue
                 packet: SkeletonPacket
                 packet.skeleton.build_recursive()
                 for bone in packet.skeleton.bones:
-                    bones.append(bone.name.upper())
-                add_skeleton(packet.skeleton.bones[2])
+                    add_skeleton(packet.skeleton.bones[2])
         except Exception as e:
-            logger.error(f"Loading {name}: {e}")
+            logger.error(f"While loading {name}: {e}")
 
     uniq_bones = sorted(list(set(bones)))
     with open("ps2_bone_map.py", "w") as f:
@@ -698,6 +694,30 @@ def main():
                 f.write(f'    "{bone}": None,\n')
 
         f.write("}\n\n")
+    
+    with open("ps2_bone_map.h", "w") as f:
+        f.write("#include <unordered_map>\n\n")
+        f.write("namespace utils {\n")
+        f.write("    extern std::unordered_map<uint32_t, std::string> bone_hashmap;\n")
+        f.write("    extern std::unordered_map<uint32_t, uint32_t> bone_hierarchy;\n")
+        f.write("}; //namespace utils\n")
+
+    with open("ps2_bone_map.cpp", "w") as f:
+        f.write('#include "ps2_bone_map.h"\n\n')
+        f.write("std::unordered_map<uint32_t, std::string> utils::bone_hashmap = {\n")
+        for bone in uniq_bones:
+            f.write(f'    {{{oaat(bone.encode("utf-8"))}u, "{bone}"}},\n')
+        f.write("};\n\n")
+        f.write("std::unordered_map<uint32_t, uint32_t> utils::bone_hierarchy = {\n")
+        for bone in uniq_bones:
+            if bone in HIERARCHY and HIERARCHY[bone] is not None:
+                f.write(f'    {{{oaat(bone.encode("utf-8"))}u, {oaat(HIERARCHY[bone].encode("utf-8"))}u}},\n')
+            elif bone.endswith("_END"):
+                f.write(f'    {{{oaat(bone.encode("utf-8"))}u, {oaat(bone[:-4].encode("utf-8"))}u}},\n')
+            elif bone in HIERARCHY and HIERARCHY[bone] is None:
+                f.write(f'    {{{oaat(bone.encode("utf-8"))}u, 0u}},\n')
+
+        f.write("};\n")
     
 if __name__ == "__main__":
     main()

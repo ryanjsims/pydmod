@@ -22,7 +22,8 @@ paths = ([]
     + [Path(p) for p in glob(server + "assets_x64*.pack2")]
     + [Path(p) for p in glob(server + "data_x64*.pack2")]
     + [Path(p) for p in glob(server + "Nexus_x64*.pack2")]
-    + [Path(p) for p in glob(server + "ui_x64*.pack2")]
+    #+ [Path(p) for p in glob(server + "ui_x64*.pack2")]
+    #+ [Path(p) for p in glob(server + "Amerish_x64*.pack2")]
 )
         
 manager = None
@@ -42,9 +43,9 @@ def main():
 
     with Pool(8) as pool:
         manager = ExportManager(paths, p=pool, namelist=namelist)
-        print("Loading packs...")
+        logger.info("Loading packs...")
         manager.loaded.wait()
-        print("Loaded.")
+        logger.info("Loaded.")
 
 if __name__ == "__main__":
     main()

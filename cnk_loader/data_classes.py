@@ -194,7 +194,7 @@ class CNK0:
                     maximum = self.verts[-1]
                 else:
                     maximum = (max(maximum[0], self.verts[-1][0]), max(maximum[1], self.verts[-1][1]), max(maximum[2], self.verts[-1][2]))
-                self.uvs.append((((z / 128) / 2) + 1, (-(1 - x / 128) + 1) / 2 + 1))
+                self.uvs.append((z / 256 + 1, x / 256 + 1))
             
             self.triangles.append([0] * self.render_batches[i].index_count)
             for j in range(self.render_batches[i].index_count):

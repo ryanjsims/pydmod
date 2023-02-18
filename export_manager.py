@@ -4,7 +4,7 @@ logger = logging.getLogger("Export Manager")
 import DbgPack
 from pathlib import Path
 from PIL import Image
-from typing import List
+from typing import List, Optional
 import magic
 from adr_converter import load_adr, get_base_model, get_animation_network
 from io import BytesIO
@@ -61,3 +61,12 @@ class ExportManager(DbgPack.AssetManager):
                         to_return |= set([Path(anim).stem + "X64.mrn"])
 
         return sorted(list(to_return))
+    
+    def get_by_namehash(self, name_hash: int) -> Optional[DbgPack.Asset2]:
+        if not self.loaded.is_set():
+            return None
+        for pack in self.packs:
+            assert type(pack) == DbgPack.Pack2
+            if name_hash in pack.raw_assets:
+                return pack.raw_assets[name_hash]
+        return None
