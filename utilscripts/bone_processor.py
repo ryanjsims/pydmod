@@ -3,7 +3,7 @@ import sys
 sys.path.append(str(Path(".").resolve()))
 
 from dme_loader.jenkins import oaat
-from mrn_loader import MRN, Bone
+from mrn_loader import MRN, Bone, PacketType, SkeletonPacket
 from export_manager import ExportManager
 from multiprocessing.pool import Pool
 
@@ -671,11 +671,14 @@ def main():
     for name in mrn_names:
         try:
             mrns.append(MRN.load(BytesIO(manager.get_raw(name).get_data())))
-            for skeleton in mrns[-1].skeletons:
-                skeleton.build_recursive()
-                for bone in skeleton.bones:
+            for packet in mrns[-1].packets:
+                if packet.header.packet_type != PacketType.skeleton:
+                    continue
+                packet: SkeletonPacket
+                packet.skeleton.build_recursive()
+                for bone in packet.skeleton.bones:
                     bones.append(bone.name.upper())
-                add_skeleton(skeleton.bones[2])
+                add_skeleton(packet.skeleton.bones[2])
         except Exception as e:
             logger.error(f"Loading {name}: {e}")
 
