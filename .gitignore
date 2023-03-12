@@ -18,3 +18,5 @@ build
 env/
 pycnkdec.egg-info/
 *.ini
+utilscripts/errors
+ps2_bone_map*

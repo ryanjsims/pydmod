@@ -638,6 +638,24 @@ HIERARCHY = {
     "WORLDROOT": None,
 }
 
+# Extra bones to include for purposes of monkey-patching data
+# These bones are bastion turret bones that appear to use non-standard name hashes for their bones, but otherwise are identical to the listed bones.
+# its weird, idk - I'm sure there's something I should be doing that would get me those bone names
+extra_bones = {
+    1923000924: "BARREL",
+    3098565902: "PITCH",
+    4220085123: "WORLDROOT",
+    119272585: "YAW",
+    1731449576: "YAWRECOIL",
+}
+
+extra_hierarchy = {
+    4220085123: 0,
+    119272585: 4220085123,
+    1731449576: 119272585,
+    3098565902: 119272585,
+    1923000924: 3098565902,
+}
 
 def main():
     bones: List[str] = []
@@ -658,6 +676,7 @@ def main():
         for child in root.children:
             if child.name.upper() in HIERARCHY and HIERARCHY[child.name.upper()] == "" or child.name.upper() not in HIERARCHY:
                 HIERARCHY[child.name.upper()] = root.name.upper()
+                print(f"Added {child.name} to hierarchy")
             add_skeleton(child)
 
     mrns: List[MRN] = []
@@ -672,11 +691,24 @@ def main():
                 if packet.header.packet_type != PacketType.skeleton:
                     continue
                 packet: SkeletonPacket
+                logger.info(f"Adding skeleton {packet.skeleton.bones[1].name}")
                 packet.skeleton.build_recursive()
-                for bone in packet.skeleton.bones:
-                    add_skeleton(packet.skeleton.bones[2])
+                add_skeleton(packet.skeleton.bones[2])
+        except ValueError as e:
+            logger.error(f"{name} is a 32 bit MRN and is not supported.")
         except Exception as e:
             logger.error(f"While loading {name}: {e}")
+            with open(Path("./utilscripts/errors") / name, "wb") as f:
+                if name.endswith(".mrn"):
+                    data = manager.get_raw(name).get_data()
+                else:
+                    data = manager.get_by_namehash(int(name)).get_data()
+                f.write(data)
+
+    for bone in HIERARCHY:
+        bones.append(bone)
+        if HIERARCHY[bone] is not None and HIERARCHY[bone] != "":
+            bones.append(HIERARCHY[bone])
 
     uniq_bones = sorted(list(set(bones)))
     with open("ps2_bone_map.py", "w") as f:
@@ -707,6 +739,10 @@ def main():
         f.write("std::unordered_map<uint32_t, std::string> utils::bone_hashmap = {\n")
         for bone in uniq_bones:
             f.write(f'    {{{oaat(bone.encode("utf-8"))}u, "{bone}"}},\n')
+        
+        for hash, name in extra_bones.items():
+            f.write(f'    {{{hash}u, "{name}"}},\n')
+
         f.write("};\n\n")
         f.write("std::unordered_map<uint32_t, uint32_t> utils::bone_hierarchy = {\n")
         for bone in uniq_bones:
@@ -716,6 +752,9 @@ def main():
                 f.write(f'    {{{oaat(bone.encode("utf-8"))}u, {oaat(bone[:-4].encode("utf-8"))}u}},\n')
             elif bone in HIERARCHY and HIERARCHY[bone] is None:
                 f.write(f'    {{{oaat(bone.encode("utf-8"))}u, 0u}},\n')
+        
+        for hash, parent in extra_hierarchy.items():
+            f.write(f'    {{{hash}u, {parent}u}},\n')
 
         f.write("};\n")
     
