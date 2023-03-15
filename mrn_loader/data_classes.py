@@ -259,7 +259,7 @@ class InitFactorIndices:
 
 @dataclass
 class AnimationSecondSegment:
-    frame_count: int
+    sample_count: int
     trs_counts: Tuple[int, int, int]
     trs_data: Tuple[bytes, bytes, bytes]
     trs_factor_indices: Tuple[List[InitFactorIndices], List[InitFactorIndices], List[InitFactorIndices]]
