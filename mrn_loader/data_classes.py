@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List, Tuple, Dict, Optional
 from scipy.spatial.transform import Rotation
 from enum import IntEnum
+from utils import read_cstr
 
 import struct
 import logging
@@ -165,7 +166,7 @@ class Skeleton:
 @dataclass
 class Factors:
     q_min: Tuple[float, float, float]
-    q_max: Tuple[float, float, float]
+    q_extent: Tuple[float, float, float]
 
 @dataclass
 class DeqFactors:
@@ -257,6 +258,9 @@ class InitFactorIndices:
         dequantization_factor_indices = struct.unpack("<BBB", data.read(3))
         return cls(init_values, dequantization_factor_indices)
 
+def next_multiple_of_four(bone_count: int) -> int:
+    return 4 * ((bone_count // 4) + (1 if (bone_count % 4 != 0) else 0))
+
 @dataclass
 class AnimationSecondSegment:
     sample_count: int
@@ -289,14 +293,11 @@ class AnimationSecondSegment:
                         end = end_data_offset - base
                     offset += 2
             data.seek(base + trs_data_factors_offsets[i])
-            parse = "<hh"
-            if i // 2 == 1:
-                parse = "<hhh"
             trs_data.append(data.read(trs_data_factors_offsets[i + 1] - trs_data_factors_offsets[i]))
-            length = end - trs_data_factors_offsets[i + 1]
-            length = length - length % 6
-            logger.debug(f"Loading factors with {length=}")
-            for _ in range(0, length, 6):
+            
+            length = next_multiple_of_four(trs_counts[len(trs_data) - 1])
+            logger.debug(f"Loading {length} init factor indices")
+            for _ in range(length):
                 trs_factor_indices[len(trs_data) - 1].append(InitFactorIndices.load(data))
         
         return cls(frame_count, trs_counts, trs_data, trs_factor_indices, end_data_offset - base)
@@ -305,10 +306,10 @@ class AnimationSecondSegment:
 class Animation:
     crc32hash: int
     version: int # Not actually sure if this is a version or not
-    unknown1: int
-    unknown2: int
-    unknown_float1: float
-    unknown_float2: float
+    static_length: int
+    alignment: int
+    duration: float
+    framerate: float
     unknown3: int
     unknown4: int
     static_bones: AnimationBoneIndices
@@ -419,6 +420,66 @@ class Animation:
         return cls(crc32hash, version, unknown1, unknown2, unknown_float1, unknown_float2, unknown3, unknown4, static_bones, dynamic_bones, translation_init_factors, trs_anim_deq_counts, trs_anim_dec_factors, static_data, dynamic_data, end_data, data.tell() - base)
 
 
+"""
+struct string_table {
+    u32 string_count;
+    u32 string_data_size;
+    u32* string_offsets[string_count] : u64 [[pointer_base("std::ptr::relative_to_parent")]];
+    string* strings[string_count] : u64 [[pointer_base("std::ptr::relative_to_parent")]];
+    padding[string_count * sizeof(u32) + string_data_size];
+    padding[while(std::mem::read_unsigned($, 1) == 0xCD)];
+};
+"""
+
+@dataclass
+class StringTable:
+    string_offsets: List[int]
+    strings: List[str]
+
+    @classmethod
+    def load(cls, data: BytesIO):
+        base = data.tell()
+        string_count, string_data_length, string_offsets_ptr, strings_ptr = struct.unpack("<IIQQ", data.read(24))
+        assert (base + string_offsets_ptr) == data.tell()
+        string_offsets = [value[0] for value in struct.iter_unpack("<I", data.read(4 * string_count))]
+        assert (base + strings_ptr) == data.tell()
+        strings = [read_cstr(data) for _ in range(string_count)]
+        assert data.tell() - (base + strings_ptr) == string_data_length, f"read_string_length={data.tell() - (base + strings_ptr)} != {string_data_length=}"
+        while data.read(1) == b'\xCD':
+            pass
+        data.seek(-1, SEEK_CUR)
+        return cls(string_offsets, strings)
+
+@dataclass
+class Filenames:
+    filenames: StringTable
+    filetypes: StringTable
+    source_filenames: StringTable
+    animation_names: StringTable
+    crc32hashes: List[int]
+
+    @classmethod
+    def load(cls, data: BytesIO):
+        base = data.tell()
+        filenames_ptr, filetypes_ptr, source_filenames_ptr, animation_names_ptr, crc32hashes_ptr = struct.unpack("<QQQQQ", data.read(40))
+        if base + filenames_ptr != data.tell():
+            data.seek(base + filenames_ptr)
+        filenames = StringTable.load(data)
+        if base + filetypes_ptr != data.tell():
+            data.seek(base + filetypes_ptr)
+        filetypes = StringTable.load(data)
+        if base + source_filenames_ptr != data.tell():
+            data.seek(base + source_filenames_ptr)
+        source_filenames = StringTable.load(data)
+        if base + animation_names_ptr != data.tell():
+            data.seek(base + animation_names_ptr)
+        animation_filenames = StringTable.load(data)
+
+        if base + crc32hashes_ptr != data.tell():
+            data.seek(base + crc32hashes_ptr)
+        crc32hashes = [value[0] for value in struct.iter_unpack(">I", data.read(4 * len(filenames.strings)))]
+        return cls(filenames, filetypes, source_filenames, animation_filenames, crc32hashes)
+
 class PacketType(IntEnum):
     skeleton = 0x01
     some_other_data = 0x02
@@ -468,6 +529,8 @@ class Packet:
             skeleton = Skeleton.load(data)
         elif header.packet_type == PacketType.animation_data:
             animation = Animation.load(data)
+        elif header.packet_type == PacketType.file_names:
+            files = Filenames.load(data)
         else:
             packet_data = data.read(header.length)
         if data.tell() - data_start < header.length:
@@ -477,6 +540,8 @@ class Packet:
             return SkeletonPacket(header, skeleton, extra)
         if header.packet_type == PacketType.animation_data:
             return AnimationPacket(header, animation, extra)
+        if header.packet_type == PacketType.file_names:
+            return FilenamePacket(header, files, extra)
         return cls(header, packet_data)
     
     @classmethod
@@ -499,6 +564,24 @@ class SkeletonPacket:
 class AnimationPacket:
     header: Header
     animation: Animation
+    extra: bytes
+
+"""
+struct file_data {
+    string_table* filenames : u64 [[pointer_base("std::ptr::relative_to_parent")]];
+    string_table* filetypes : u64 [[pointer_base("std::ptr::relative_to_parent")]];
+    string_table* source_filenames : u64 [[pointer_base("std::ptr::relative_to_parent")]];
+    string_table* animation_names : u64 [[pointer_base("std::ptr::relative_to_parent")]];
+    // Turns out imhex does not allow you to dereference pointers to get values.
+    // The count here should be filenames->string_count but unfortunately that is not available in imhex
+    be u32* crc32hashes[std::mem::read_unsigned(addressof(this) + 40, 4)] : u64 [[pointer_base("std::ptr::relative_to_parent")]];
+};
+"""
+
+@dataclass
+class FilenamePacket:
+    header: Header
+    files: Filenames
     extra: bytes
 
 @dataclass
