@@ -29,12 +29,33 @@ def align(data: BytesIO, alignment: int):
     if data.tell() % alignment != 0:
             data.read(alignment - (data.tell() % alignment))
 
+def sign(rot: Rotation):
+    sign = 1.0
+    for num in numpy.signbit(rot.as_quat()):
+        sign *= -1.0 if num else 1.0
+    return sign
+
 @dataclass
 class Bone:
     name: str
+    index: int
     offset: numpy.ndarray
     rotation: Rotation
     children: List['Bone']
+    reoriented: bool = False
+    global_offset: numpy.ndarray = None
+
+    def reorient(self):
+        if self.reoriented:
+            return
+        self.reoriented = True
+        for child in self.children:
+            child.reorient()
+        
+            child.offset -= self.offset
+            child.rotation *= self.rotation.inv()
+
+            child.offset = sign(self.rotation) * self.rotation.inv().as_quat() * child.offset
 
     def __repr__(self) -> str:
         return f"Bone(name='{self.name}', offset={self.offset}, rotation={self.rotation.as_quat()}, children={self.children})"
@@ -138,7 +159,7 @@ class Skeleton:
 
         transforms = OrientationData.load(data, skeleton_length)
         
-        bones = [Bone(bone_names[i], numpy.array(transforms.offsets[i], dtype=numpy.float32), Rotation.from_quat(transforms.rotations[i]), []) for i in range(len(bone_names))]
+        bones = [Bone(bone_names[i], i, numpy.array(transforms.offsets[i], dtype=numpy.float32), Rotation.from_quat(transforms.rotations[i]), []) for i in range(len(bone_names))]
         logger.debug(f"Loaded skeleton {bones[1].name}")
         return cls(rotation, position, chain_count, unknown_array1, unknown_array2, unknown_array3, hierarchy, skeleton_length, unknown_array4, indices, variable_length_unknowns, constant_length_unknowns, bones, transforms)
 
@@ -149,6 +170,18 @@ class Skeleton:
                 if parent != -1:
                     self.bones[parent].children.append(self.bones[i])
                 parent = i
+    
+    def calc_global_offsets(self):
+        if len(self.bones[0].children) == 0:
+            self.build_recursive()
+        self.__calc_offsets(self.bones[0])
+
+    def __calc_offsets(self, root: Bone):
+        if root.global_offset is None:
+            root.global_offset = root.offset[:3]
+        for child in root.children:
+            child.global_offset = root.global_offset + child.offset[:3]
+            self.__calc_offsets(child)
 
     def pretty_print(self):
         if len(self.bones[0].children) == 0:
@@ -261,6 +294,29 @@ class InitFactorIndices:
 def next_multiple_of_four(bone_count: int) -> int:
     return 4 * ((bone_count // 4) + (1 if (bone_count % 4 != 0) else 0))
 
+def unpack_pos(packed_pos: Tuple[int, int, int], init_factor_indices: InitFactorIndices, pos_factors: List[Factors]) -> Tuple[float, float, float]:
+    PRECISION_XY = 2048.0
+    PRECISION_Z  = 1024.0
+    x_factors = pos_factors[init_factor_indices.dequantization_factor_indices[0]]
+    x_quant_factor = x_factors.q_extent[0]
+    x_quant_min = x_factors.q_min[0]
+
+    y_factors = pos_factors[init_factor_indices.dequantization_factor_indices[1]]
+    y_quant_factor = y_factors.q_extent[1]
+    y_quant_min = y_factors.q_min[1]
+
+    z_factors = pos_factors[init_factor_indices.dequantization_factor_indices[2]]
+    z_quant_factor = z_factors.q_extent[2]
+    z_quant_min = z_factors.q_min[2]
+
+    dequant_x = x_quant_factor * (packed_pos[0] + (init_factor_indices.init_values[0] / 256.0) * PRECISION_XY) + x_quant_min 
+    dequant_y = y_quant_factor * (packed_pos[1] + (init_factor_indices.init_values[1] / 256.0) * PRECISION_XY) + y_quant_min
+    dequant_z = z_quant_factor * (packed_pos[2] + (init_factor_indices.init_values[2] / 256.0) * PRECISION_Z) + z_quant_min
+    return dequant_x, dequant_y, dequant_z
+
+def unpack_rotation() -> Rotation:
+    pass
+
 @dataclass
 class AnimationSecondSegment:
     sample_count: int
@@ -268,6 +324,36 @@ class AnimationSecondSegment:
     trs_data: Tuple[bytes, bytes, bytes]
     trs_factor_indices: Tuple[List[InitFactorIndices], List[InitFactorIndices], List[InitFactorIndices]]
     size: int
+    translation: numpy.ndarray = None
+    rotation: List[List[Rotation]] = None
+    scale: List[List[numpy.ndarray]] = None
+
+    def dequantize(self, factors: DeqFactors, shorts_per_rotation: int = 3):
+        if self.trs_counts[0] > 0:
+            translation: List[List[Tuple[float, float, float]]] = []
+            translation_bone_count = self.trs_counts[0]
+            for sample in range(self.sample_count):
+                translation.append([])
+                for bone in range(translation_bone_count):
+                    data_offset = sample * translation_bone_count * 4 + bone * 4
+                    value = struct.unpack("<I", self.trs_data[0][data_offset:data_offset+4])[0]
+                    # 11 bits for x and y, 10 bits for z
+                    pos_quant = ((value >> 21) & 0x7FF, (value >> 10) & 0x7FF, value & 0x3FF)
+
+                    translation[sample].append(unpack_pos(pos_quant, self.trs_factor_indices[0][bone], factors.translation))
+            self.translation = numpy.array(translation, dtype=numpy.float32)
+        
+        # if self.trs_counts[1] > 0:
+        #     self.rotation = []
+        #     rotation_bone_count = self.trs_counts[1]
+        #     for sample in range(self.sample_count):
+        #         self.rotation.append([])
+        #         for bone in range(rotation_bone_count):
+        #             data_offset = sample * rotation_bone_count * 2 * shorts_per_rotation + bone * 2 * shorts_per_rotation
+        #             value = struct.unpack("<" + "H" * shorts_per_rotation, self.trs_data[0][data_offset : data_offset + 2 * shorts_per_rotation])
+
+        #             self.rotation[sample].append(unpack_rotation(pos_quant, self.trs_factor_indices[0][bone], factors.rotation))
+
 
     @classmethod
     def load(cls, data: BytesIO, end_data_offset: int):
@@ -316,7 +402,7 @@ class Animation:
     dynamic_bones: AnimationBoneIndices
     translation_init_factors: Tuple[float, float, float, float, float, float]
     trs_anim_deq_counts: Tuple[int, int, int]
-    trs_anim_dec_factors: DeqFactors
+    trs_anim_deq_factors: DeqFactors
 
     static_data: AnimationFirstSegment
     dynamic_data: AnimationSecondSegment
@@ -390,11 +476,11 @@ class Animation:
 
         dynamic_bones = AnimationBoneIndices(dynamic_translation_bone_indices, dynamic_rotation_bone_indices, dynamic_scale_bone_indices)
 
-        trs_anim_dec_factors = DeqFactors([], [], [])
+        trs_anim_deq_factors = DeqFactors([], [], [])
         for i in range(len(trs_deq_factor_offsets)):
             offset = trs_deq_factor_offsets[i]
             data.seek(base + offset) 
-            trs_anim_dec_factors[i] = [Factors(floats[:3], floats[3:]) for floats in struct.iter_unpack("<ffffff", data.read(24 * trs_anim_deq_counts[i]))]
+            trs_anim_deq_factors[i] = [Factors(floats[:3], floats[3:]) for floats in struct.iter_unpack("<ffffff", data.read(24 * trs_anim_deq_counts[i]))]
         
         if first_segment_offset != 0:
             data.seek(base + first_segment_offset)
@@ -417,7 +503,7 @@ class Animation:
         data.seek(base + end_data_offset)
         end_data = data.read(96)
 
-        return cls(crc32hash, version, unknown1, unknown2, unknown_float1, unknown_float2, unknown3, unknown4, static_bones, dynamic_bones, translation_init_factors, trs_anim_deq_counts, trs_anim_dec_factors, static_data, dynamic_data, end_data, data.tell() - base)
+        return cls(crc32hash, version, unknown1, unknown2, unknown_float1, unknown_float2, unknown3, unknown4, static_bones, dynamic_bones, translation_init_factors, trs_anim_deq_counts, trs_anim_deq_factors, static_data, dynamic_data, end_data, data.tell() - base)
 
 
 """
@@ -436,8 +522,20 @@ class StringTable:
     string_offsets: List[int]
     strings: List[str]
 
+    def __getitem__(self, index: int) -> str:
+        return self.strings[index]
+    
+    def __len__(self) -> int:
+        return len(self.strings)
+    
+    def __iter__(self):
+        return iter(self.strings)
+    
+    def __contains__(self, string: str):
+        return string in self.strings
+
     @classmethod
-    def load(cls, data: BytesIO):
+    def load(cls, data: BytesIO) -> 'StringTable':
         base = data.tell()
         string_count, string_data_length, string_offsets_ptr, strings_ptr = struct.unpack("<IIQQ", data.read(24))
         assert (base + string_offsets_ptr) == data.tell()
@@ -449,6 +547,48 @@ class StringTable:
             pass
         data.seek(-1, SEEK_CUR)
         return cls(string_offsets, strings)
+
+@dataclass
+class ExtStringTable:
+    string_ids: List[int]
+    string_offsets: List[int]
+    unknown_ints: List[int]
+    strings: List[str]
+
+    def __getitem__(self, index: int) -> str:
+        return self.strings[index]
+    
+    def __len__(self) -> int:
+        return len(self.strings)
+    
+    def __iter__(self):
+        return iter(self.strings)
+    
+    def __contains__(self, string: str):
+        return string in self.strings
+
+    @classmethod
+    def load(cls, data: BytesIO) -> 'ExtStringTable':
+        base = data.tell()
+        string_count, data_size = struct.unpack("<II", data.read(8))
+        string_ids_ptr, string_offsets_ptr, unknown_ints_ptr, strings_ptr = struct.unpack("<QQQQ", data.read(32))
+        if base + string_ids_ptr != data.tell():
+            data.seek(base + string_ids_ptr)
+        string_ids = [value[0] for value in struct.iter_unpack("<I", data.read(4 * string_count))]
+        
+        if base + string_offsets_ptr != data.tell():
+            data.seek(base + string_offsets_ptr)
+        string_offsets = [value[0] for value in struct.iter_unpack("<I", data.read(4 * string_count))]
+
+        if base + unknown_ints_ptr != data.tell():
+            data.seek(base + unknown_ints_ptr)
+        unknown_ints = [value[0] for value in struct.iter_unpack("<I", data.read(4 * string_count))]
+
+        if base + strings_ptr != data.tell():
+            data.seek(base + strings_ptr)
+        strings = [read_cstr(data) for _ in range(string_count)]
+        assert data.tell() - (base + strings_ptr) == data_size
+        return cls(string_ids, string_offsets, unknown_ints, strings)
 
 @dataclass
 class Filenames:
@@ -480,6 +620,35 @@ class Filenames:
         crc32hashes = [value[0] for value in struct.iter_unpack(">I", data.read(4 * len(filenames.strings)))]
         return cls(filenames, filetypes, source_filenames, animation_filenames, crc32hashes)
 
+@dataclass
+class SkeletonNames:
+    skeletons: ExtStringTable
+
+    def __getitem__(self, index: int) -> str:
+        return self.skeletons[index]
+
+    def __len__(self) -> int:
+        return len(self.skeletons)
+    
+    def __iter__(self):
+        return iter(self.skeletons)
+    
+    def __contains__(self, skeleton: str):
+        return skeleton in self.skeletons
+    
+    def index_of(self, skeleton: str) -> int:
+        if skeleton not in self.skeletons:
+            return -1
+        return self.skeletons.strings.index(skeleton)
+
+    @classmethod
+    def load(cls, data: BytesIO) -> 'SkeletonNames':
+        base = data.tell()
+        skeletons_ptr = struct.unpack("<Q", data.read(8))[0]
+        assert base + skeletons_ptr == data.tell()
+        skeletons = ExtStringTable.load(data)
+        return cls(skeletons)
+
 class PacketType(IntEnum):
     skeleton = 0x01
     some_other_data = 0x02
@@ -489,7 +658,7 @@ class PacketType(IntEnum):
     maybe_animation_data = 0x0A   # not sure but it has some names in it that sound like it
     name = 0x0C
     file_names = 0x0E       # same as above - has some file name data in it alongside other stuff.
-    vehicle_names = 0x0F
+    skeleton_names = 0x0F
     animation_data = 0x10     # Data that has an index rather than namehash in the header
 
 
@@ -531,6 +700,8 @@ class Packet:
             animation = Animation.load(data)
         elif header.packet_type == PacketType.file_names:
             files = Filenames.load(data)
+        elif header.packet_type == PacketType.skeleton_names:
+            skeleton_names = SkeletonNames.load(data)
         else:
             packet_data = data.read(header.length)
         if data.tell() - data_start < header.length:
@@ -542,6 +713,8 @@ class Packet:
             return AnimationPacket(header, animation, extra)
         if header.packet_type == PacketType.file_names:
             return FilenamePacket(header, files, extra)
+        if header.packet_type == PacketType.skeleton_names:
+            return SkeletonNamesPacket(header, skeleton_names, extra)
         return cls(header, packet_data)
     
     @classmethod
@@ -585,9 +758,34 @@ class FilenamePacket:
     extra: bytes
 
 @dataclass
+class SkeletonNamesPacket:
+    header: Header
+    skeletons: SkeletonNames
+    extra: bytes
+
+@dataclass
 class MRN:
     #skeletons: List[Skeleton]
     packets: List[Packet]
+    _filenames_index: int
+    _skeleton_names_index: int
+    _skeleton_packets_indices: List[int]
+    _skeleton_packets: List[SkeletonPacket] = None
+
+    def filenames_packet(self) -> Optional[FilenamePacket]:
+        if self._filenames_index == -1:
+            return None
+        return self.packets[self._filenames_index]
+    
+    def skeleton_names_packet(self) -> Optional[SkeletonNamesPacket]:
+        if self._skeleton_names_index == -1:
+            return None
+        return self.packets[self._skeleton_names_index]
+
+    def skeleton_packets(self) -> List[SkeletonPacket]:
+        if self._skeleton_packets is None:
+            self._skeleton_packets = [self.packets[index] for index in self._skeleton_packets_indices]
+        return self._skeleton_packets
 
     @classmethod
     def load(cls, data: BytesIO) -> 'MRN':
@@ -599,13 +797,23 @@ class MRN:
         #     skeleton = Skeleton.load(data)
         # logger.info(f"Loaded {len(skeletons)} skeletons!")
 
+        filenames_index = -1
+        skeleton_names_index = -1
+        skeleton_indices = []
         packets = []
         data.seek(0, SEEK_END)
         length = data.tell()
         data.seek(0)
         while data.tell() < length:
             logger.debug(f"Loading packet {len(packets) + 1} at offset {data.tell():08x}...")
-            packets.append(Packet.load(data))
+            packet = Packet.load(data)
+            if packet.header.packet_type == PacketType.file_names:
+                filenames_index = len(packets)
+            elif packet.header.packet_type == PacketType.skeleton_names:
+                skeleton_names_index = len(packets)
+            elif packet.header.packet_type == PacketType.skeleton:
+                skeleton_indices.append(len(packets))
+            packets.append(packet)
             logger.debug(f"Loaded packet {len(packets)}")
         logger.info(f"Loaded {len(packets)} MRN packets!")
-        return cls(packets)
+        return cls(packets, filenames_index, skeleton_names_index, skeleton_indices)
