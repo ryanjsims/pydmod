@@ -134,8 +134,8 @@ def main():
 
         offset = len(animation_data)
         
+        animation.dynamic_data.dequantize(animation.trs_anim_deq_factors)
         if len(animation.dynamic_bones.translation) > 0:
-            animation.dynamic_data.dequantize(animation.trs_anim_deq_factors)
             for j, bone in enumerate(animation.dynamic_bones.translation):
                 gltf_animation.channels.append(AnimationChannel(
                     sampler=len(gltf_animation.samplers),
@@ -146,7 +146,7 @@ def main():
                 ))
 
                 data_accessor = len(gltf.accessors)
-                print(animation.dynamic_data.translation[:, j, :] + skeleton.bones[bone].global_offset)
+                #print(animation.dynamic_data.translation[:, j, :] + skeleton.bones[bone].global_offset)
                 translation_data = animation.dynamic_data.translation[:, j, :].flatten().tobytes()
                 gltf.accessors.append(Accessor(
                     bufferView=len(gltf.bufferViews),
@@ -161,6 +161,40 @@ def main():
                 ))
 
                 animation_data += translation_data
+                offset = len(animation_data)
+
+                gltf_animation.samplers.append(AnimationSampler(
+                    input=time_accessor,
+                    output=data_accessor
+                ))
+        
+        if len(animation.dynamic_bones.rotation) > 0:
+            for j, bone in enumerate(animation.dynamic_bones.rotation):
+                #print(animation.dynamic_data.rotation[:, j, :])
+                gltf_animation.channels.append(AnimationChannel(
+                    sampler=len(gltf_animation.samplers),
+                    target=AnimationChannelTarget(
+                        node=bone - 1,
+                        path="rotation"
+                    )
+                ))
+
+                data_accessor = len(gltf.accessors)
+                #print(animation.dynamic_data.translation[:, j, :] + skeleton.bones[bone].global_offset)
+                rotation_data = animation.dynamic_data.rotation[:, j, :].flatten().tobytes()
+                gltf.accessors.append(Accessor(
+                    bufferView=len(gltf.bufferViews),
+                    componentType=FLOAT,
+                    count=len(sample_times),
+                    type=VEC4
+                ))
+                gltf.bufferViews.append(BufferView(
+                    buffer=len(gltf.buffers),
+                    byteOffset=offset,
+                    byteLength=len(rotation_data)
+                ))
+
+                animation_data += rotation_data
                 offset = len(animation_data)
 
                 gltf_animation.samplers.append(AnimationSampler(

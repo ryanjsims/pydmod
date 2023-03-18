@@ -314,8 +314,35 @@ def unpack_pos(packed_pos: Tuple[int, int, int], init_factor_indices: InitFactor
     dequant_z = z_quant_factor * (packed_pos[2] + (init_factor_indices.init_values[2] / 256.0) * PRECISION_Z) + z_quant_min
     return dequant_x, dequant_y, dequant_z
 
-def unpack_rotation() -> Rotation:
-    pass
+def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: InitFactorIndices, rot_factors: List[Factors]) -> Rotation:
+    PRECISION = 65536.0
+    x_factors = rot_factors[init_factor_indices.dequantization_factor_indices[0]]
+    x_quant_factor = x_factors.q_extent[0]
+    x_quant_min = x_factors.q_min[0]
+
+    y_factors = rot_factors[init_factor_indices.dequantization_factor_indices[1]]
+    y_quant_factor = y_factors.q_extent[1]
+    y_quant_min = y_factors.q_min[1]
+
+    z_factors = rot_factors[init_factor_indices.dequantization_factor_indices[2]]
+    z_quant_factor = z_factors.q_extent[2]
+    z_quant_min = z_factors.q_min[2]
+
+    dequant_x = x_quant_factor * (rot_quant[0] + (init_factor_indices.init_values[0] / 256.0) * PRECISION) + x_quant_min 
+    dequant_y = y_quant_factor * (rot_quant[1] + (init_factor_indices.init_values[1] / 256.0) * PRECISION) + y_quant_min
+    dequant_z = z_quant_factor * (rot_quant[2] + (init_factor_indices.init_values[2] / 256.0) * PRECISION) + z_quant_min
+
+    vec_squared = dequant_x * dequant_x + dequant_y * dequant_y + dequant_z * dequant_z
+    dequant_w = vec_squared + 1.0
+
+    temp = 2.0 / dequant_w
+    output_w = dequant_w / (1.0 - vec_squared)
+    output_x = temp * dequant_x
+    output_y = temp * dequant_y
+    output_z = temp * dequant_z
+
+    return Rotation.from_quat([output_x, output_y, output_z, output_w])
+
 
 @dataclass
 class AnimationSecondSegment:
@@ -325,10 +352,10 @@ class AnimationSecondSegment:
     trs_factor_indices: Tuple[List[InitFactorIndices], List[InitFactorIndices], List[InitFactorIndices]]
     size: int
     translation: numpy.ndarray = None
-    rotation: List[List[Rotation]] = None
+    rotation: numpy.ndarray = None
     scale: List[List[numpy.ndarray]] = None
 
-    def dequantize(self, factors: DeqFactors, shorts_per_rotation: int = 3):
+    def dequantize(self, factors: DeqFactors):
         if self.trs_counts[0] > 0:
             translation: List[List[Tuple[float, float, float]]] = []
             translation_bone_count = self.trs_counts[0]
@@ -343,16 +370,20 @@ class AnimationSecondSegment:
                     translation[sample].append(unpack_pos(pos_quant, self.trs_factor_indices[0][bone], factors.translation))
             self.translation = numpy.array(translation, dtype=numpy.float32)
         
-        # if self.trs_counts[1] > 0:
-        #     self.rotation = []
-        #     rotation_bone_count = self.trs_counts[1]
-        #     for sample in range(self.sample_count):
-        #         self.rotation.append([])
-        #         for bone in range(rotation_bone_count):
-        #             data_offset = sample * rotation_bone_count * 2 * shorts_per_rotation + bone * 2 * shorts_per_rotation
-        #             value = struct.unpack("<" + "H" * shorts_per_rotation, self.trs_data[0][data_offset : data_offset + 2 * shorts_per_rotation])
+        if self.trs_counts[1] > 0:
+            rotation_bone_count = self.trs_counts[1]
+            shorts_per_rotation = len(self.trs_data[1]) // (self.sample_count * rotation_bone_count * 2)
+            # print(shorts_per_rotation)
+            # shorts_per_rotation: int = 4 if len(self.trs_data[1]) % 8 == 0 and len(self.trs_data[1]) % 6 != 0 else 3
+            rotation: List[List[Tuple[float, float, float, float]]] = []
+            for sample in range(self.sample_count):
+                rotation.append([])
+                for bone in range(rotation_bone_count):
+                    data_offset = sample * rotation_bone_count * 2 * shorts_per_rotation + bone * 2 * shorts_per_rotation
+                    rot_quant = struct.unpack("<" + "H" * shorts_per_rotation, self.trs_data[1][data_offset : data_offset + 2 * shorts_per_rotation])
 
-        #             self.rotation[sample].append(unpack_rotation(pos_quant, self.trs_factor_indices[0][bone], factors.rotation))
+                    rotation[sample].append(unpack_rotation(rot_quant, self.trs_factor_indices[1][bone], factors.rotation).as_quat().tolist())
+            self.rotation = numpy.array(rotation, dtype=numpy.float32)
 
 
     @classmethod
