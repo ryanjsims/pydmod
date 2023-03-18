@@ -134,7 +134,7 @@ def main():
 
         offset = len(animation_data)
         
-        animation.dynamic_data.dequantize(animation.trs_anim_deq_factors)
+        animation.dynamic_data.dequantize(animation.trs_anim_deq_factors, animation.translation_init_factors)
         if len(animation.dynamic_bones.translation) > 0:
             for j, bone in enumerate(animation.dynamic_bones.translation):
                 gltf_animation.channels.append(AnimationChannel(

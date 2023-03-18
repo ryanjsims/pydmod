@@ -294,9 +294,7 @@ class InitFactorIndices:
 def next_multiple_of_four(bone_count: int) -> int:
     return 4 * ((bone_count // 4) + (1 if (bone_count % 4 != 0) else 0))
 
-def unpack_pos(packed_pos: Tuple[int, int, int], init_factor_indices: InitFactorIndices, pos_factors: List[Factors]) -> Tuple[float, float, float]:
-    PRECISION_XY = 2048.0
-    PRECISION_Z  = 1024.0
+def unpack_pos(packed_pos: Tuple[int, int, int], init_factor_indices: InitFactorIndices, pos_factors: List[Factors], init_factors: Factors) -> Tuple[float, float, float]:
     x_factors = pos_factors[init_factor_indices.dequantization_factor_indices[0]]
     x_quant_factor = x_factors.q_extent[0]
     x_quant_min = x_factors.q_min[0]
@@ -309,9 +307,13 @@ def unpack_pos(packed_pos: Tuple[int, int, int], init_factor_indices: InitFactor
     z_quant_factor = z_factors.q_extent[2]
     z_quant_min = z_factors.q_min[2]
 
-    dequant_x = x_quant_factor * (packed_pos[0] + (init_factor_indices.init_values[0] / 256.0) * PRECISION_XY) + x_quant_min 
-    dequant_y = y_quant_factor * (packed_pos[1] + (init_factor_indices.init_values[1] / 256.0) * PRECISION_XY) + y_quant_min
-    dequant_z = z_quant_factor * (packed_pos[2] + (init_factor_indices.init_values[2] / 256.0) * PRECISION_Z) + z_quant_min
+    init_x = init_factors.q_extent[0] * init_factor_indices.init_values[0] + init_factors.q_min[0]
+    init_y = init_factors.q_extent[1] * init_factor_indices.init_values[1] + init_factors.q_min[1]
+    init_z = init_factors.q_extent[2] * init_factor_indices.init_values[2] + init_factors.q_min[2]
+
+    dequant_x = x_quant_factor * packed_pos[0] + x_quant_min + init_x
+    dequant_y = y_quant_factor * packed_pos[1] + y_quant_min + init_y
+    dequant_z = z_quant_factor * packed_pos[2] + z_quant_min + init_z
     return dequant_x, dequant_y, dequant_z
 
 def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: InitFactorIndices, rot_factors: List[Factors]) -> Rotation:
@@ -355,7 +357,7 @@ class AnimationSecondSegment:
     rotation: numpy.ndarray = None
     scale: List[List[numpy.ndarray]] = None
 
-    def dequantize(self, factors: DeqFactors):
+    def dequantize(self, factors: DeqFactors, translation_init_factors: Factors):
         if self.trs_counts[0] > 0:
             translation: List[List[Tuple[float, float, float]]] = []
             translation_bone_count = self.trs_counts[0]
@@ -367,7 +369,7 @@ class AnimationSecondSegment:
                     # 11 bits for x and y, 10 bits for z
                     pos_quant = ((value >> 21) & 0x7FF, (value >> 10) & 0x7FF, value & 0x3FF)
 
-                    translation[sample].append(unpack_pos(pos_quant, self.trs_factor_indices[0][bone], factors.translation))
+                    translation[sample].append(unpack_pos(pos_quant, self.trs_factor_indices[0][bone], factors.translation, translation_init_factors))
             self.translation = numpy.array(translation, dtype=numpy.float32)
         
         if self.trs_counts[1] > 0:
@@ -431,7 +433,7 @@ class Animation:
     unknown4: int
     static_bones: AnimationBoneIndices
     dynamic_bones: AnimationBoneIndices
-    translation_init_factors: Tuple[float, float, float, float, float, float]
+    translation_init_factors: Factors
     trs_anim_deq_counts: Tuple[int, int, int]
     trs_anim_deq_factors: DeqFactors
 
@@ -454,7 +456,9 @@ class Animation:
         version, _, unknown1, unknown2, unknown_float1, unknown_float2, unknown3, unknown4 = struct.unpack("<IQIIffII", data.read(36))
         static_index_offsets = struct.unpack("<QQQ", data.read(24))
         dynamic_index_offsets = struct.unpack("<QQQ", data.read(24))
-        translation_init_factors = struct.unpack("<ffffff", data.read(24))
+        init_factors_min = struct.unpack("<fff", data.read(12))
+        init_factors_scaled_extent = struct.unpack("<fff", data.read(12))
+        translation_init_factors = Factors(init_factors_min, init_factors_scaled_extent)
         data.read(8)
         trs_anim_deq_counts = struct.unpack("<III", data.read(12))
         data.read(4)
