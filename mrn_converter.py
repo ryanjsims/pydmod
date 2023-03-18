@@ -20,23 +20,16 @@ handler.setFormatter(logging.Formatter(
 def add_skeleton_to_gltf(gltf: GLTF2, skeleton: Skeleton) -> bytes:
     joints = []
     matrices_bin = b''
-    combined_translation = numpy.array([0, 0, 0], dtype=numpy.float32)
-    combined_rotation = Rotation.from_quat([0, 0, 0, 1])
     for bone in skeleton.bones[2:]:
         joints.append(len(gltf.nodes))
         gltf.nodes.append(Node(
             translation=bone.offset.tolist()[:3],
             rotation=bone.rotation.as_quat().tolist(),
             scale=[1, 1, 1],
-            name=f"{bone.index - 1} {bone.name.upper()}",
+            name=f"{bone.name.upper()}",
             children=[child.index - 2 for child in bone.children]
         ))
-        combined_translation -= bone.offset[:3]
-        combined_rotation *= bone.rotation.inv()
-        bind_matrix = numpy.matrix(numpy.empty((4, 4)), dtype=numpy.float32)
-        bind_matrix[:3, :3] = combined_rotation.as_matrix()
-        bind_matrix[3, :3] = combined_translation
-        bind_matrix[:, 3] = numpy.atleast_2d([0, 0, 0, 1]).T
+        bind_matrix = numpy.matrix(bone.global_transform, dtype=numpy.float32).I
         matrices_bin += bind_matrix.flatten().tobytes()
     
     gltf.skins.append(Skin(inverseBindMatrices=len(gltf.accessors), joints=joints))
@@ -61,7 +54,9 @@ def main():
     parser = ArgumentParser(description="MRN to GLTF Animation exporter")
     parser.add_argument("input_file", type=str, help="Name of the input MRN animation file")
     parser.add_argument("--list", "-l", action="store_true", help="List the available skeletons to export, then exit")
+    parser.add_argument("--list-anims", "-a", action="store_true", help="List the available animations to export, then exit")
     parser.add_argument("--skeleton", "-s", type=str, default="", help="Name of the skeleton to export")
+    parser.add_argument("--export-anim", "-e", type=str, default="", help="Specific animation to export")
     parser.add_argument("--output-file", "-o", type=str, help="Where to store the converted file. If not provided, will use the input filename and change the extension")
     parser.add_argument("--format", "-f", choices=["gltf", "glb"], help="The output format to use, required for conversion")
     parser.add_argument("--verbose", "-v", help="Increase log level, can be specified multiple times", action="count", default=0)
@@ -80,6 +75,13 @@ def main():
         print(f"{len(mrn.skeleton_names_packet().skeletons)} available skeletons:")
         for name in mrn.skeleton_names_packet().skeletons:
             print(f"\t{name}")
+
+    if args.list_anims:
+        print(f"{len(mrn.filenames_packet().files.animation_names)} available animations:")
+        for name in mrn.filenames_packet().files.animation_names:
+            print(f"\t{name}")
+    
+    if args.list or args.list_anims:
         sys.exit(0)
 
     if args.skeleton == "":
@@ -92,8 +94,8 @@ def main():
 
     skeleton_index = mrn.skeleton_names_packet().skeletons.index_of(args.skeleton)
     skeleton = mrn.skeleton_packets()[skeleton_index].skeleton
-    skeleton.calc_global_offsets()
-    #skeleton.bones[0].reorient()
+    skeleton.calc_global_transforms()
+    skeleton.pretty_print()
 
     gltf = GLTF2()
     blob = add_skeleton_to_gltf(gltf, skeleton)
@@ -102,11 +104,11 @@ def main():
 
     logger.info(f"Exporting animations for {args.skeleton}...")
     for i, name in enumerate(mrn.filenames_packet().files.animation_names):
-        animation_data = b''
-        offset = 0
-        if not name.split("_")[0] == args.skeleton:
+        if args.export_anim != "" and args.export_anim != name or args.export_anim == "" and not name.split("_")[0] == args.skeleton:
             continue
         logger.info(f"\t{i: 3d}: {name}")
+        animation_data = b''
+        offset = 0
 
         animation_packet: AnimationPacket = mrn.packets[i]
         animation = animation_packet.animation

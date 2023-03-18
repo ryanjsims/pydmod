@@ -43,7 +43,7 @@ class Bone:
     rotation: Rotation
     children: List['Bone']
     reoriented: bool = False
-    global_offset: numpy.ndarray = None
+    global_transform: numpy.ndarray = numpy.identity(4, dtype=numpy.float32)
 
     def reorient(self):
         if self.reoriented:
@@ -171,18 +171,22 @@ class Skeleton:
                     self.bones[parent].children.append(self.bones[i])
                 parent = i
     
-    def calc_global_offsets(self):
+    def calc_global_transforms(self):
         if len(self.bones[0].children) == 0:
             self.build_recursive()
-        self.__calc_offsets(self.bones[0])
+        self.__calc_transform(self.bones[1])
 
-    def __calc_offsets(self, root: Bone):
-        if root.global_offset is None:
-            root.global_offset = root.offset[:3]
+    def __calc_transform(self, root: Bone):
         for child in root.children:
-            child.global_offset = root.global_offset + child.offset[:3]
-            self.__calc_offsets(child)
+            local_translation = numpy.identity(4, dtype=numpy.float32)
+            local_translation[3, :3] = child.offset[:3]
+            local_rotation = numpy.identity(4, dtype=numpy.float32)
+            local_rotation[:3, :3] = numpy.matrix(child.rotation.as_matrix()).T
+            local_transform = numpy.matmul(local_rotation, local_translation)
 
+            child.global_transform = numpy.matmul(local_transform, root.global_transform)
+            self.__calc_transform(child)
+    
     def pretty_print(self):
         if len(self.bones[0].children) == 0:
             self.build_recursive()
