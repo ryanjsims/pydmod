@@ -35,6 +35,12 @@ def sign(rot: Rotation):
         sign *= -1.0 if num else 1.0
     return sign
 
+def sign_list(rot: List[float]):
+    sign = 1.0
+    for num in numpy.signbit(rot):
+        sign *= -1.0 if num else 1.0
+    return sign
+
 @dataclass
 class Bone:
     name: str
@@ -44,6 +50,7 @@ class Bone:
     children: List['Bone']
     reoriented: bool = False
     global_transform: numpy.ndarray = numpy.identity(4, dtype=numpy.float32)
+    parent: 'Bone' = None
 
     def reorient(self):
         if self.reoriented:
@@ -169,6 +176,7 @@ class Skeleton:
             for i in range(entry.chain_start, entry.chain_start + entry.chain_length):
                 if parent != -1:
                     self.bones[parent].children.append(self.bones[i])
+                    self.bones[i].parent = self.bones[parent]
                 parent = i
     
     def calc_global_transforms(self):
@@ -333,19 +341,29 @@ def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: I
     z_factors = rot_factors[init_factor_indices.dequantization_factor_indices[2]]
     z_quant_factor = z_factors.q_extent[2]
     z_quant_min = z_factors.q_min[2]
+    
+    init_x = (init_factor_indices.init_values[0] / 256.0) * PRECISION
+    init_y = (init_factor_indices.init_values[1] / 256.0) * PRECISION
+    init_z = (init_factor_indices.init_values[2] / 256.0) * PRECISION
 
-    dequant_x = x_quant_factor * (rot_quant[0] + (init_factor_indices.init_values[0] / 256.0) * PRECISION) + x_quant_min 
-    dequant_y = y_quant_factor * (rot_quant[1] + (init_factor_indices.init_values[1] / 256.0) * PRECISION) + y_quant_min
-    dequant_z = z_quant_factor * (rot_quant[2] + (init_factor_indices.init_values[2] / 256.0) * PRECISION) + z_quant_min
+
+    dequant_x = x_quant_factor * (rot_quant[0] + init_x) + x_quant_min 
+    dequant_y = y_quant_factor * (rot_quant[1] + init_y) + y_quant_min
+    dequant_z = z_quant_factor * (rot_quant[2] + init_z) + z_quant_min
 
     vec_squared = dequant_x * dequant_x + dequant_y * dequant_y + dequant_z * dequant_z
     dequant_w = vec_squared + 1.0
 
     temp = 2.0 / dequant_w
-    output_w = dequant_w / (1.0 - vec_squared)
+    output_w = (1.0 - vec_squared) / (1.0 + vec_squared)
     output_x = temp * dequant_x
     output_y = temp * dequant_y
     output_z = temp * dequant_z
+
+    sign_val = sign(Rotation.from_quat([output_x, output_y, output_z, output_w]))
+
+    #logger.debug(f"Rotation Vector: ({dequant_x: .5f}, {dequant_y: .5f}, {dequant_z: .5f})")
+    logger.debug(f"Quaternion:      ({output_x: .3f}, {output_y: .3f}, {output_z: .3f}, {output_w: .3f})")
 
     return Rotation.from_quat([output_x, output_y, output_z, output_w])
 

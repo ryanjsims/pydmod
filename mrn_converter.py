@@ -95,7 +95,7 @@ def main():
     skeleton_index = mrn.skeleton_names_packet().skeletons.index_of(args.skeleton)
     skeleton = mrn.skeleton_packets()[skeleton_index].skeleton
     skeleton.calc_global_transforms()
-    skeleton.pretty_print()
+    #skeleton.pretty_print()
 
     gltf = GLTF2()
     blob = add_skeleton_to_gltf(gltf, skeleton)
@@ -144,7 +144,10 @@ def main():
                     target=AnimationChannelTarget(
                         node=bone - 1,
                         path="translation"
-                    )
+                    ),
+                    extras = {
+                        "bone_name": f"{skeleton.bones[bone+1].name}"
+                    }
                 ))
 
                 data_accessor = len(gltf.accessors)
@@ -178,12 +181,22 @@ def main():
                     target=AnimationChannelTarget(
                         node=bone - 1,
                         path="rotation"
-                    )
+                    ),
+                    extras = {
+                        "bone_name": f"{skeleton.bones[bone+1].name}"
+                    }
                 ))
 
                 data_accessor = len(gltf.accessors)
                 #print(animation.dynamic_data.translation[:, j, :] + skeleton.bones[bone].global_offset)
+                rotation = Rotation.from_quat(animation.dynamic_data.rotation[:, j, :])
+                if skeleton.bones[bone].parent is not None:
+                    global_rotation = Rotation.from_matrix(skeleton.bones[bone].parent.global_transform[:3, :3])
+                else:
+                    global_rotation = Rotation.identity()
+                transformed = rotation * global_rotation
                 rotation_data = animation.dynamic_data.rotation[:, j, :].flatten().tobytes()
+                #rotation_data = numpy.array(transformed.as_quat().tolist(), dtype=numpy.float32).flatten().tobytes()
                 gltf.accessors.append(Accessor(
                     bufferView=len(gltf.bufferViews),
                     componentType=FLOAT,
