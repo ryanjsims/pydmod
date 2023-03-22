@@ -190,13 +190,12 @@ def main():
                 data_accessor = len(gltf.accessors)
                 #print(animation.dynamic_data.translation[:, j, :] + skeleton.bones[bone].global_offset)
                 rotation = Rotation.from_quat(animation.dynamic_data.rotation[:, j, :])
-                if skeleton.bones[bone].parent is not None:
-                    global_rotation = Rotation.from_matrix(skeleton.bones[bone].parent.global_transform[:3, :3])
-                else:
-                    global_rotation = Rotation.identity()
-                transformed = rotation * global_rotation
-                rotation_data = animation.dynamic_data.rotation[:, j, :].flatten().tobytes()
-                #rotation_data = numpy.array(transformed.as_quat().tolist(), dtype=numpy.float32).flatten().tobytes()
+                local_rotation = skeleton.bones[bone+1].rotation * rotation[0].inv()
+                
+                transformed = local_rotation * rotation
+                # rotation_data = animation.dynamic_data.rotation[:, j, [0, 1, 2, 3]]
+                # rotation_data = rotation_data.flatten().tobytes()
+                rotation_data = numpy.array(transformed.as_quat().tolist(), dtype=numpy.float32).flatten().tobytes()
                 gltf.accessors.append(Accessor(
                     bufferView=len(gltf.bufferViews),
                     componentType=FLOAT,

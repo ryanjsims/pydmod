@@ -346,10 +346,15 @@ def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: I
     init_y = (init_factor_indices.init_values[1] / 256.0) * PRECISION
     init_z = (init_factor_indices.init_values[2] / 256.0) * PRECISION
 
+    init_vals = (
+        x_quant_factor * init_x + x_quant_min,
+        y_quant_factor * init_y + y_quant_min,
+        z_quant_factor * init_z + z_quant_min,
+    )
 
-    dequant_x = x_quant_factor * (rot_quant[0] + init_x) + x_quant_min 
-    dequant_y = y_quant_factor * (rot_quant[1] + init_y) + y_quant_min
-    dequant_z = z_quant_factor * (rot_quant[2] + init_z) + z_quant_min
+    dequant_x = x_quant_factor * (rot_quant[0]) + x_quant_min
+    dequant_y = y_quant_factor * (rot_quant[1]) + y_quant_min
+    dequant_z = z_quant_factor * (rot_quant[2]) + z_quant_min
 
     vec_squared = dequant_x * dequant_x + dequant_y * dequant_y + dequant_z * dequant_z
     dequant_w = vec_squared + 1.0
@@ -360,11 +365,19 @@ def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: I
     output_y = temp * dequant_y
     output_z = temp * dequant_z
 
+    init_vec_sq = sum([val ** 2 for val in init_vals])
+    temp = 2.0 / (1 + init_vec_sq)
+    deq_init_w = (1 - init_vec_sq) / (1 + init_vec_sq)
+    deq_init_x = temp * init_vals[0]
+    deq_init_y = temp * init_vals[1]
+    deq_init_z = temp * init_vals[2]
+
     sign_val = sign(Rotation.from_quat([output_x, output_y, output_z, output_w]))
 
     #logger.debug(f"Rotation Vector: ({dequant_x: .5f}, {dequant_y: .5f}, {dequant_z: .5f})")
     logger.debug(f"Quaternion:      ({output_x: .3f}, {output_y: .3f}, {output_z: .3f}, {output_w: .3f})")
-
+    logger.debug(f"Initial Vals:    ({deq_init_x: .3f}, {deq_init_y: .3f}, {deq_init_z: .3f}, {deq_init_w: .3f})")
+    logger.debug(f"Init XYZ:        {Rotation.from_quat([deq_init_x, deq_init_y, deq_init_z, deq_init_w]).as_euler('xyz', True).tolist()}")
     return Rotation.from_quat([output_x, output_y, output_z, output_w])
 
 
@@ -402,10 +415,11 @@ class AnimationSecondSegment:
             rotation: List[List[Tuple[float, float, float, float]]] = []
             for sample in range(self.sample_count):
                 rotation.append([])
+                logger.debug(f"{sample=}")
                 for bone in range(rotation_bone_count):
                     data_offset = sample * rotation_bone_count * 2 * shorts_per_rotation + bone * 2 * shorts_per_rotation
                     rot_quant = struct.unpack("<" + "H" * shorts_per_rotation, self.trs_data[1][data_offset : data_offset + 2 * shorts_per_rotation])
-
+                    logger.debug(f"{bone=}")
                     rotation[sample].append(unpack_rotation(rot_quant, self.trs_factor_indices[1][bone], factors.rotation).as_quat().tolist())
             self.rotation = numpy.array(rotation, dtype=numpy.float32)
 
