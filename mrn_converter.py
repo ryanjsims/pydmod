@@ -189,7 +189,7 @@ def main():
                 data_accessor = len(gltf.accessors)
                 #print(animation.dynamic_data.translation[:, j, :] + skeleton.bones[bone].global_offset)
                 rotation = Rotation.from_quat(animation.dynamic_data.rotation[:, j, :])
-                local_rotation = skeleton.bones[bone+1].rotation
+                local_rotation = skeleton.bones[bone+1].rotation * rotation[0].inv()
                 #logger.info(f"{(skeleton.bones[bone+1].rotation * rotation[0].inv()).as_quat()}")
                 
                 transformed = local_rotation * rotation
