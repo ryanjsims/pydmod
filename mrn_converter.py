@@ -17,7 +17,7 @@ handler.setFormatter(logging.Formatter(
     datefmt="%Y-%m-%d %H:%M:%S"
 ))
 
-def add_skeleton_to_gltf(gltf: GLTF2, skeleton: Skeleton) -> bytes:
+def add_skeleton_to_gltf(gltf: GLTF2, skeleton: Skeleton, skeleton_name: str) -> bytes:
     joints = []
     matrices_bin = b''
     for bone in skeleton.bones[2:]:
@@ -32,7 +32,7 @@ def add_skeleton_to_gltf(gltf: GLTF2, skeleton: Skeleton) -> bytes:
         bind_matrix = numpy.matrix(bone.global_transform, dtype=numpy.float32).I
         matrices_bin += bind_matrix.flatten().tobytes()
     
-    gltf.skins.append(Skin(inverseBindMatrices=len(gltf.accessors), joints=joints))
+    gltf.skins.append(Skin(name=skeleton_name, inverseBindMatrices=len(gltf.accessors), joints=joints))
     gltf.accessors.append(Accessor(
         bufferView=len(gltf.bufferViews),
         componentType=FLOAT,
@@ -96,11 +96,10 @@ def main():
     skeleton = mrn.skeleton_packets()[skeleton_index].skeleton
     skeleton.calc_global_transforms()
     #skeleton.pretty_print()
+    path = Path(args.output_file if args.output_file else "export/animations/" + args.skeleton + ".gltf")
 
     gltf = GLTF2()
-    blob = add_skeleton_to_gltf(gltf, skeleton)
-
-    path = Path(args.output_file if args.output_file else "export/animations/" + args.skeleton + ".gltf")
+    blob = add_skeleton_to_gltf(gltf, skeleton, path.stem)
 
     logger.info(f"Exporting animations for {args.skeleton}...")
     for i, name in enumerate(mrn.filenames_packet().files.animation_names):
@@ -190,7 +189,8 @@ def main():
                 data_accessor = len(gltf.accessors)
                 #print(animation.dynamic_data.translation[:, j, :] + skeleton.bones[bone].global_offset)
                 rotation = Rotation.from_quat(animation.dynamic_data.rotation[:, j, :])
-                local_rotation = skeleton.bones[bone+1].rotation * rotation[0].inv()
+                local_rotation = skeleton.bones[bone+1].rotation
+                #logger.info(f"{(skeleton.bones[bone+1].rotation * rotation[0].inv()).as_quat()}")
                 
                 transformed = local_rotation * rotation
                 # rotation_data = animation.dynamic_data.rotation[:, j, [0, 1, 2, 3]]

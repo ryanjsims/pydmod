@@ -328,7 +328,7 @@ def unpack_pos(packed_pos: Tuple[int, int, int], init_factor_indices: InitFactor
     dequant_z = z_quant_factor * packed_pos[2] + z_quant_min + init_z
     return dequant_x, dequant_y, dequant_z
 
-def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: InitFactorIndices, rot_factors: List[Factors]) -> Rotation:
+def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: InitFactorIndices, rot_factors: List[Factors], init_factors: Factors) -> Rotation:
     PRECISION = 65536.0
     x_factors = rot_factors[init_factor_indices.dequantization_factor_indices[0]]
     x_quant_factor = x_factors.q_extent[0]
@@ -351,6 +351,12 @@ def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: I
         y_quant_factor * init_y + y_quant_min,
         z_quant_factor * init_z + z_quant_min,
     )
+
+    init_x = init_factors.q_extent[0] * init_factor_indices.init_values[0] + init_factors.q_min[0]
+    init_y = init_factors.q_extent[1] * init_factor_indices.init_values[1] + init_factors.q_min[1]
+    init_z = init_factors.q_extent[2] * init_factor_indices.init_values[2] + init_factors.q_min[2]
+
+    init_vals2 = (init_x, init_y, init_z)
 
     dequant_x = x_quant_factor * (rot_quant[0]) + x_quant_min
     dequant_y = y_quant_factor * (rot_quant[1]) + y_quant_min
@@ -375,9 +381,11 @@ def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: I
     sign_val = sign(Rotation.from_quat([output_x, output_y, output_z, output_w]))
 
     #logger.debug(f"Rotation Vector: ({dequant_x: .5f}, {dequant_y: .5f}, {dequant_z: .5f})")
-    logger.debug(f"Quaternion:      ({output_x: .3f}, {output_y: .3f}, {output_z: .3f}, {output_w: .3f})")
-    logger.debug(f"Initial Vals:    ({deq_init_x: .3f}, {deq_init_y: .3f}, {deq_init_z: .3f}, {deq_init_w: .3f})")
-    logger.debug(f"Init XYZ:        {Rotation.from_quat([deq_init_x, deq_init_y, deq_init_z, deq_init_w]).as_euler('xyz', True).tolist()}")
+    #logger.debug(f"Quaternion:      ({output_x: .3f}, {output_y: .3f}, {output_z: .3f}, {output_w: .3f})")
+    print(f"Initial Vals 1:  ({init_vals[0]: .5f}, {init_vals[1]: .5f}, {init_vals[2]: .5f})")
+    print(f"Initial Vals 2:  ({init_vals2[0]: .5f}, {init_vals2[1]: .5f}, {init_vals2[2]: .5f})")
+    print(f"Initial Quat:    ({deq_init_x: .5f}, {deq_init_y: .5f}, {deq_init_z: .5f}, {deq_init_w: .5f})")
+    #logger.debug(f"Init XYZ:        {Rotation.from_quat([deq_init_x, deq_init_y, deq_init_z, deq_init_w]).as_euler('xyz', True).tolist()}")
     return Rotation.from_quat([output_x, output_y, output_z, output_w])
 
 
@@ -415,12 +423,12 @@ class AnimationSecondSegment:
             rotation: List[List[Tuple[float, float, float, float]]] = []
             for sample in range(self.sample_count):
                 rotation.append([])
-                logger.debug(f"{sample=}")
+                print(f"{sample=}")
                 for bone in range(rotation_bone_count):
                     data_offset = sample * rotation_bone_count * 2 * shorts_per_rotation + bone * 2 * shorts_per_rotation
                     rot_quant = struct.unpack("<" + "H" * shorts_per_rotation, self.trs_data[1][data_offset : data_offset + 2 * shorts_per_rotation])
-                    logger.debug(f"{bone=}")
-                    rotation[sample].append(unpack_rotation(rot_quant, self.trs_factor_indices[1][bone], factors.rotation).as_quat().tolist())
+                    print(f"{bone=}")
+                    rotation[sample].append(unpack_rotation(rot_quant, self.trs_factor_indices[1][bone], factors.rotation, translation_init_factors).as_quat().tolist())
             self.rotation = numpy.array(rotation, dtype=numpy.float32)
 
 
