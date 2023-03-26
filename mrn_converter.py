@@ -114,6 +114,9 @@ def main():
         if animation.dynamic_data is None:
             continue
 
+        bone_offset = skeleton.bone_count - animation.total_bones
+        logger.info(f"{bone_offset=}")
+
         gltf_animation = Animation(name=name)
         
         sample_times = numpy.array([index / animation.framerate for index in range(animation.dynamic_data.sample_count)], dtype=numpy.float32)
@@ -141,11 +144,11 @@ def main():
                 gltf_animation.channels.append(AnimationChannel(
                     sampler=len(gltf_animation.samplers),
                     target=AnimationChannelTarget(
-                        node=bone - 1,
+                        node=bone - 2 + bone_offset,
                         path="translation"
                     ),
                     extras = {
-                        "bone_name": f"{skeleton.bones[bone+1].name}"
+                        "bone_name": f"{skeleton.bones[bone+bone_offset].name}"
                     }
                 ))
 
@@ -175,22 +178,25 @@ def main():
         if len(animation.dynamic_bones.rotation) > 0:
             for j, bone in enumerate(animation.dynamic_bones.rotation):
                 #print(animation.dynamic_data.rotation[:, j, :])
+                rotation = Rotation.from_quat(animation.dynamic_data.rotation[:, j, :])
+                local_rotation = skeleton.bones[bone+bone_offset].rotation * rotation[0].inv()
                 gltf_animation.channels.append(AnimationChannel(
                     sampler=len(gltf_animation.samplers),
                     target=AnimationChannelTarget(
-                        node=bone - 1,
+                        node=bone - 2 + bone_offset,
                         path="rotation"
                     ),
                     extras = {
-                        "bone_name": f"{skeleton.bones[bone+1].name}"
+                        "bone_name": f"{skeleton.bones[bone+bone_offset].name}",
                     }
                 ))
 
                 data_accessor = len(gltf.accessors)
                 #print(animation.dynamic_data.translation[:, j, :] + skeleton.bones[bone].global_offset)
-                rotation = Rotation.from_quat(animation.dynamic_data.rotation[:, j, :])
-                local_rotation = skeleton.bones[bone+1].rotation * rotation[0].inv()
-                #logger.info(f"{(skeleton.bones[bone+1].rotation * rotation[0].inv()).as_quat()}")
+                logger.info(f"Bone {j}: {skeleton.bones[bone+bone_offset].name}")
+                logger.info(f"\tFirst frame inv: {rotation[0].inv().as_quat()}")
+                logger.info(f"\tBone rotation:   {skeleton.bones[bone+bone_offset].rotation.as_quat()}")
+                logger.info(f"\tOffset rotation: {local_rotation.as_quat()}")
                 
                 transformed = local_rotation * rotation
                 # rotation_data = animation.dynamic_data.rotation[:, j, [0, 1, 2, 3]]

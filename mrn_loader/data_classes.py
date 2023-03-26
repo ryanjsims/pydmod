@@ -382,9 +382,9 @@ def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: I
 
     #logger.debug(f"Rotation Vector: ({dequant_x: .5f}, {dequant_y: .5f}, {dequant_z: .5f})")
     #logger.debug(f"Quaternion:      ({output_x: .3f}, {output_y: .3f}, {output_z: .3f}, {output_w: .3f})")
-    print(f"Initial Vals 1:  ({init_vals[0]: .5f}, {init_vals[1]: .5f}, {init_vals[2]: .5f})")
-    print(f"Initial Vals 2:  ({init_vals2[0]: .5f}, {init_vals2[1]: .5f}, {init_vals2[2]: .5f})")
-    print(f"Initial Quat:    ({deq_init_x: .5f}, {deq_init_y: .5f}, {deq_init_z: .5f}, {deq_init_w: .5f})")
+    logger.debug(f"Initial Vals 1:  ({init_vals[0]: .5f}, {init_vals[1]: .5f}, {init_vals[2]: .5f})")
+    logger.debug(f"Initial Vals 2:  ({init_vals2[0]: .5f}, {init_vals2[1]: .5f}, {init_vals2[2]: .5f})")
+    logger.debug(f"Initial Quat:    ({deq_init_x: .5f}, {deq_init_y: .5f}, {deq_init_z: .5f}, {deq_init_w: .5f})")
     #logger.debug(f"Init XYZ:        {Rotation.from_quat([deq_init_x, deq_init_y, deq_init_z, deq_init_w]).as_euler('xyz', True).tolist()}")
     return Rotation.from_quat([output_x, output_y, output_z, output_w])
 
@@ -418,16 +418,21 @@ class AnimationSecondSegment:
         if self.trs_counts[1] > 0:
             rotation_bone_count = self.trs_counts[1]
             shorts_per_rotation = len(self.trs_data[1]) // (self.sample_count * rotation_bone_count * 2)
+            extra = (len(self.trs_data[1]) % (self.sample_count * rotation_bone_count * 2))
+            extra_per_sample = extra // self.sample_count
+            if extra_per_sample != 0:
+                logger.info(f"Extra bytes per sample: {extra_per_sample}")
+            #assert extra == 0, f"{extra=}, {extra_per_sample=}"
             # print(shorts_per_rotation)
             # shorts_per_rotation: int = 4 if len(self.trs_data[1]) % 8 == 0 and len(self.trs_data[1]) % 6 != 0 else 3
             rotation: List[List[Tuple[float, float, float, float]]] = []
             for sample in range(self.sample_count):
                 rotation.append([])
-                print(f"{sample=}")
+                logger.debug(f"{sample=}")
                 for bone in range(rotation_bone_count):
-                    data_offset = sample * rotation_bone_count * 2 * shorts_per_rotation + bone * 2 * shorts_per_rotation
+                    data_offset = sample * rotation_bone_count * 2 * shorts_per_rotation + bone * 2 * shorts_per_rotation + sample * extra_per_sample
                     rot_quant = struct.unpack("<" + "H" * shorts_per_rotation, self.trs_data[1][data_offset : data_offset + 2 * shorts_per_rotation])
-                    print(f"{bone=}")
+                    logger.debug(f"{bone=}")
                     rotation[sample].append(unpack_rotation(rot_quant, self.trs_factor_indices[1][bone], factors.rotation, translation_init_factors).as_quat().tolist())
             self.rotation = numpy.array(rotation, dtype=numpy.float32)
 
@@ -473,8 +478,8 @@ class Animation:
     alignment: int
     duration: float
     framerate: float
-    unknown3: int
-    unknown4: int
+    total_bones: int
+    animated_bones: int
     static_bones: AnimationBoneIndices
     dynamic_bones: AnimationBoneIndices
     translation_init_factors: Factors
