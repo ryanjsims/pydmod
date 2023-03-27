@@ -56,7 +56,7 @@ def main():
     parser.add_argument("--list", "-l", action="store_true", help="List the available skeletons to export, then exit")
     parser.add_argument("--list-anims", "-a", action="store_true", help="List the available animations to export, then exit")
     parser.add_argument("--skeleton", "-s", type=str, default="", help="Name of the skeleton to export")
-    parser.add_argument("--export-anim", "-e", type=str, default="", help="Specific animation to export")
+    parser.add_argument("--export-anims", "-e", nargs="*", type=str, help="Specific animation to export")
     parser.add_argument("--output-file", "-o", type=str, help="Where to store the converted file. If not provided, will use the input filename and change the extension")
     parser.add_argument("--format", "-f", choices=["gltf", "glb"], help="The output format to use, required for conversion")
     parser.add_argument("--verbose", "-v", help="Increase log level, can be specified multiple times", action="count", default=0)
@@ -103,7 +103,7 @@ def main():
 
     logger.info(f"Exporting animations for {args.skeleton}...")
     for i, name in enumerate(mrn.filenames_packet().files.animation_names):
-        if args.export_anim != "" and args.export_anim != name or args.export_anim == "" and not name.split("_")[0] == args.skeleton:
+        if args.export_anims and name not in args.export_anims or not args.export_anims and not name.split("_")[0] == args.skeleton:
             continue
         logger.info(f"\t{i: 3d}: {name}")
         animation_data = b''
@@ -115,7 +115,7 @@ def main():
             continue
 
         bone_offset = skeleton.bone_count - animation.total_bones
-        logger.info(f"{bone_offset=}")
+        logger.debug(f"{bone_offset=}")
 
         gltf_animation = Animation(name=name)
         
@@ -179,7 +179,8 @@ def main():
             for j, bone in enumerate(animation.dynamic_bones.rotation):
                 #print(animation.dynamic_data.rotation[:, j, :])
                 rotation = Rotation.from_quat(animation.dynamic_data.rotation[:, j, :])
-                local_rotation = skeleton.bones[bone+bone_offset].rotation * rotation[0].inv()
+                initial_rotations = Rotation.from_quat(animation.dynamic_data.initial_rotations)
+                local_rotation = initial_rotations[j]
                 gltf_animation.channels.append(AnimationChannel(
                     sampler=len(gltf_animation.samplers),
                     target=AnimationChannelTarget(
@@ -193,10 +194,10 @@ def main():
 
                 data_accessor = len(gltf.accessors)
                 #print(animation.dynamic_data.translation[:, j, :] + skeleton.bones[bone].global_offset)
-                logger.info(f"Bone {j}: {skeleton.bones[bone+bone_offset].name}")
-                logger.info(f"\tFirst frame inv: {rotation[0].inv().as_quat()}")
-                logger.info(f"\tBone rotation:   {skeleton.bones[bone+bone_offset].rotation.as_quat()}")
-                logger.info(f"\tOffset rotation: {local_rotation.as_quat()}")
+                logger.debug(f"Bone {j}: {skeleton.bones[bone+bone_offset].name}")
+                logger.debug(f"\tFirst frame inv: {rotation[0].inv().as_quat()}")
+                logger.debug(f"\tBone rotation:   {skeleton.bones[bone+bone_offset].rotation.as_quat()}")
+                logger.debug(f"\tOffset rotation: {local_rotation.as_quat()}")
                 
                 transformed = local_rotation * rotation
                 # rotation_data = animation.dynamic_data.rotation[:, j, [0, 1, 2, 3]]

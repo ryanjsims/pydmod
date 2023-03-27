@@ -261,6 +261,42 @@ class AnimationFirstSegment:
     unknown: int
     trs_data: Tuple[bytes, bytes, bytes]
     size: int
+    translation: numpy.ndarray = None
+    rotation: numpy.ndarray = None
+
+    def dequantize(self):
+        if self.trs_counts[0] > 0:
+            translation_factors = self.trs_factors.translation[0]
+            translation = []
+            for i in range(self.trs_counts[0]):
+                x, y, z = struct.unpack("<HHH", self.trs_data[0][i * 6 : (i + 1) * 6])
+                x_dequant = translation_factors.q_extent[0] * x + translation_factors.q_min[0]
+                y_dequant = translation_factors.q_extent[1] * y + translation_factors.q_min[1]
+                z_dequant = translation_factors.q_extent[2] * z + translation_factors.q_min[2]
+                translation.append((x_dequant, y_dequant, z_dequant))
+            self.translation = numpy.array(translation, dtype=numpy.float32)
+
+        if self.trs_counts[1] > 0:
+            rotation_factors = self.trs_factors.rotation[0]
+            rotation = []
+            for i in range(self.trs_counts[1]):
+                x, y, z = struct.unpack("<HHH", self.trs_data[1][i * 6 : (i + 1) * 6])
+                x_dequant = rotation_factors.q_extent[0] * x + rotation_factors.q_min[0]
+                y_dequant = rotation_factors.q_extent[1] * y + rotation_factors.q_min[1]
+                z_dequant = rotation_factors.q_extent[2] * z + rotation_factors.q_min[2]
+
+                vec_squared = x_dequant * x_dequant + y_dequant * y_dequant + z_dequant * z_dequant
+                dequant_w = vec_squared + 1.0
+
+                temp = 2.0 / dequant_w
+                output_w = (1.0 - vec_squared) / (1.0 + vec_squared)
+                output_x = temp * x_dequant
+                output_y = temp * y_dequant
+                output_z = temp * z_dequant
+
+                rotation.append((output_x, output_y, output_z, output_w))
+            self.rotation = numpy.array(rotation, dtype=numpy.float32)
+
 
     @classmethod
     def load(cls, data: BytesIO, second_segment_offset: int):
@@ -328,8 +364,7 @@ def unpack_pos(packed_pos: Tuple[int, int, int], init_factor_indices: InitFactor
     dequant_z = z_quant_factor * packed_pos[2] + z_quant_min + init_z
     return dequant_x, dequant_y, dequant_z
 
-def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: InitFactorIndices, rot_factors: List[Factors], init_factors: Factors) -> Rotation:
-    PRECISION = 65536.0
+def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: InitFactorIndices, rot_factors: List[Factors], init_factors: Factors) -> Tuple[Tuple[float, float, float, float], Tuple[float, float, float, float]]:
     x_factors = rot_factors[init_factor_indices.dequantization_factor_indices[0]]
     x_quant_factor = x_factors.q_extent[0]
     x_quant_min = x_factors.q_min[0]
@@ -342,22 +377,6 @@ def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: I
     z_quant_factor = z_factors.q_extent[2]
     z_quant_min = z_factors.q_min[2]
     
-    init_x = (init_factor_indices.init_values[0] / 256.0) * PRECISION
-    init_y = (init_factor_indices.init_values[1] / 256.0) * PRECISION
-    init_z = (init_factor_indices.init_values[2] / 256.0) * PRECISION
-
-    init_vals = (
-        x_quant_factor * init_x + x_quant_min,
-        y_quant_factor * init_y + y_quant_min,
-        z_quant_factor * init_z + z_quant_min,
-    )
-
-    init_x = init_factors.q_extent[0] * init_factor_indices.init_values[0] + init_factors.q_min[0]
-    init_y = init_factors.q_extent[1] * init_factor_indices.init_values[1] + init_factors.q_min[1]
-    init_z = init_factors.q_extent[2] * init_factor_indices.init_values[2] + init_factors.q_min[2]
-
-    init_vals2 = (init_x, init_y, init_z)
-
     dequant_x = x_quant_factor * (rot_quant[0]) + x_quant_min
     dequant_y = y_quant_factor * (rot_quant[1]) + y_quant_min
     dequant_z = z_quant_factor * (rot_quant[2]) + z_quant_min
@@ -371,22 +390,20 @@ def unpack_rotation(rot_quant: Tuple[int, int, int, int], init_factor_indices: I
     output_y = temp * dequant_y
     output_z = temp * dequant_z
 
+    init_vals = (
+        (init_factor_indices.init_values[0] / 128) - 1,
+        (init_factor_indices.init_values[1] / 128) - 1,
+        (init_factor_indices.init_values[2] / 128) - 1,
+    )
+
     init_vec_sq = sum([val ** 2 for val in init_vals])
     temp = 2.0 / (1 + init_vec_sq)
-    deq_init_w = (1 - init_vec_sq) / (1 + init_vec_sq)
-    deq_init_x = temp * init_vals[0]
-    deq_init_y = temp * init_vals[1]
-    deq_init_z = temp * init_vals[2]
+    init_w = (1 - init_vec_sq) / (1 + init_vec_sq)
+    init_x = temp * init_vals[0]
+    init_y = temp * init_vals[1]
+    init_z = temp * init_vals[2]
 
-    sign_val = sign(Rotation.from_quat([output_x, output_y, output_z, output_w]))
-
-    #logger.debug(f"Rotation Vector: ({dequant_x: .5f}, {dequant_y: .5f}, {dequant_z: .5f})")
-    #logger.debug(f"Quaternion:      ({output_x: .3f}, {output_y: .3f}, {output_z: .3f}, {output_w: .3f})")
-    logger.debug(f"Initial Vals 1:  ({init_vals[0]: .5f}, {init_vals[1]: .5f}, {init_vals[2]: .5f})")
-    logger.debug(f"Initial Vals 2:  ({init_vals2[0]: .5f}, {init_vals2[1]: .5f}, {init_vals2[2]: .5f})")
-    logger.debug(f"Initial Quat:    ({deq_init_x: .5f}, {deq_init_y: .5f}, {deq_init_z: .5f}, {deq_init_w: .5f})")
-    #logger.debug(f"Init XYZ:        {Rotation.from_quat([deq_init_x, deq_init_y, deq_init_z, deq_init_w]).as_euler('xyz', True).tolist()}")
-    return Rotation.from_quat([output_x, output_y, output_z, output_w])
+    return (output_x, output_y, output_z, output_w), (init_x, init_y, init_z, init_w)
 
 
 @dataclass
@@ -398,6 +415,7 @@ class AnimationSecondSegment:
     size: int
     translation: numpy.ndarray = None
     rotation: numpy.ndarray = None
+    initial_rotations: numpy.ndarray = None
     scale: List[List[numpy.ndarray]] = None
 
     def dequantize(self, factors: DeqFactors, translation_init_factors: Factors):
@@ -421,11 +439,12 @@ class AnimationSecondSegment:
             extra = (len(self.trs_data[1]) % (self.sample_count * rotation_bone_count * 2))
             extra_per_sample = extra // self.sample_count
             if extra_per_sample != 0:
-                logger.info(f"Extra bytes per sample: {extra_per_sample}")
+                logger.debug(f"Extra bytes per sample: {extra_per_sample}")
             #assert extra == 0, f"{extra=}, {extra_per_sample=}"
             # print(shorts_per_rotation)
             # shorts_per_rotation: int = 4 if len(self.trs_data[1]) % 8 == 0 and len(self.trs_data[1]) % 6 != 0 else 3
             rotation: List[List[Tuple[float, float, float, float]]] = []
+            initial: List[Tuple[float, float, float, float]] = []
             for sample in range(self.sample_count):
                 rotation.append([])
                 logger.debug(f"{sample=}")
@@ -433,8 +452,12 @@ class AnimationSecondSegment:
                     data_offset = sample * rotation_bone_count * 2 * shorts_per_rotation + bone * 2 * shorts_per_rotation + sample * extra_per_sample
                     rot_quant = struct.unpack("<" + "H" * shorts_per_rotation, self.trs_data[1][data_offset : data_offset + 2 * shorts_per_rotation])
                     logger.debug(f"{bone=}")
-                    rotation[sample].append(unpack_rotation(rot_quant, self.trs_factor_indices[1][bone], factors.rotation, translation_init_factors).as_quat().tolist())
+                    rot, init = unpack_rotation(rot_quant, self.trs_factor_indices[1][bone], factors.rotation, translation_init_factors)
+                    rotation[sample].append(rot)
+                    if len(initial) <= bone:
+                        initial.append(init)
             self.rotation = numpy.array(rotation, dtype=numpy.float32)
+            self.initial_rotations = numpy.array(initial, dtype=numpy.float32)
 
 
     @classmethod
