@@ -201,7 +201,7 @@ class Skeleton:
         self.__print_recursive(self.bones[0], 0)
     
     def __print_recursive(self, root: Bone, depth: int):
-        print("    " * depth + root.name)
+        print("    " * depth + str(root.index) + " " + root.name)
         for bone in root.children:
             self.__print_recursive(bone, depth + 1)
     
@@ -319,7 +319,7 @@ class AnimationFirstSegment:
             while end == 0 and offset < len(trs_offsets):
                 end = trs_offsets[offset]
                 offset += 1
-            assert end > 0
+            assert end > 0, f"End was {end}"
             data.seek(base + trs_offsets[i])
             try:
                 trs_data.append(data.read(6 * trs_counts[i]))
@@ -522,7 +522,7 @@ class Animation:
         return data.read(count)
 
     @classmethod
-    def load(cls, data: BytesIO) -> 'Animation':
+    def load(cls, data: BytesIO, total_length: int) -> 'Animation':
         base = data.tell()
         crc32hash = struct.unpack(">I", data.read(4))[0]
         version, _, unknown1, unknown2, unknown_float1, unknown_float2, unknown3, unknown4 = struct.unpack("<IQIIffII", data.read(36))
@@ -593,7 +593,7 @@ class Animation:
             data.seek(base + first_segment_offset)
             logger.debug(f"Loading static data from offset {first_segment_offset:08x}")
             logger.debug(f"{second_segment_offset=:08x}")
-            end_offset = second_segment_offset if second_segment_offset > 0 else end_data_offset
+            end_offset = second_segment_offset if second_segment_offset > 0 else (end_data_offset if end_data_offset > 0 else total_length)
             logger.debug(f"{end_offset=:08x}")
             static_data = AnimationFirstSegment.load(data, base + end_offset)
         else:
@@ -804,7 +804,7 @@ class Packet:
         if header.packet_type == PacketType.skeleton:
             skeleton = Skeleton.load(data)
         elif header.packet_type == PacketType.animation_data:
-            animation = Animation.load(data)
+            animation = Animation.load(data, header.length)
         elif header.packet_type == PacketType.file_names:
             files = Filenames.load(data)
         elif header.packet_type == PacketType.skeleton_names:
