@@ -20,15 +20,68 @@ handler.setFormatter(logging.Formatter(
 def add_skeleton_to_gltf(gltf: GLTF2, skeleton: Skeleton, skeleton_name: str) -> bytes:
     joints = []
     matrices_bin = b''
+    print([(i, bone.name) for i, bone in enumerate(skeleton.bones)])
+    skeleton.bones = (
+        # Root to R_BALL
+        skeleton.bones[:9]
+        # L_HIP to L_BALL
+        + skeleton.bones[10:14]
+        # SPINELOWER to L_WRIST
+        + skeleton.bones[15:22]
+        # L_WEAPON 
+        + skeleton.bones[42:43]
+        # R_CLAVICLE and R_SHOULDER
+        + skeleton.bones[45:47]
+        # R_ELBOW and R_WRIST
+        + skeleton.bones[48:50]
+        # R_WEAPON
+        + skeleton.bones[70:71]
+        # NECK and HEAD
+        + skeleton.bones[72:74]
+        # TRAJECTORY
+        + skeleton.bones[75:]
+        # L_PINKY A, B, and C
+        + skeleton.bones[30:34]
+        # L_INDEX A, B, and C
+        + skeleton.bones[34:38]
+        # L_THUMB A, B, and C
+        + skeleton.bones[38:42]
+        # L_FOREARM and L_SHOULDERROLL
+        + skeleton.bones[43:45]
+        # R_FOREARM
+        + skeleton.bones[71:72]
+        # R_SHOULDERROLL
+        + skeleton.bones[47:48]
+        # L_MIDDLE A, B, and C
+        + skeleton.bones[22:26]
+        # L_RING A, B, and C
+        + skeleton.bones[26:30]
+        # R_INDEX A, B, and C
+        + skeleton.bones[54:58]
+        # R_RING A, B, and C
+        + skeleton.bones[58:62]
+        # R_PINKY A, B, and C
+        + skeleton.bones[62:66]
+        # R_THUMB A, B, and C
+        + skeleton.bones[66:70]
+        # R_MIDDLE A, B, and C
+        + skeleton.bones[50:54]
+    )
+    print([(i, bone.name) for i, bone in enumerate(skeleton.bones)])
     for bone in skeleton.bones:
         joints.append(len(gltf.nodes))
-        gltf.nodes.append(Node(
+        node = Node(
             translation=bone.offset.tolist()[:3],
             rotation=bone.rotation.as_quat().tolist(),
             scale=[1, 1, 1],
             name=f"{bone.name.upper()}",
-            children=[child.index for child in bone.children]
-        ))
+            children=[skeleton.index(child.name) for child in bone.children]
+        )
+        if None in node.children:
+            node.children.remove(None)
+            if node.children == []:
+                node.children = None
+        gltf.nodes.append(node)
         bind_matrix = numpy.matrix(bone.global_transform, dtype=numpy.float32).I
         matrices_bin += bind_matrix.flatten().tobytes()
     
@@ -50,11 +103,17 @@ def add_skeleton_to_gltf(gltf: GLTF2, skeleton: Skeleton, skeleton_name: str) ->
 
     return matrices_bin
 
+skips = [
+    "R_TOE", "L_TOE", "HEAD_END", 
+    #"L_middle_end".upper(), "L_ring_end".upper(), "L_pinky_end".upper(), "L_index_end".upper(), "L_thumb_end".upper(), 
+    #"R_middle_end".upper(), "R_ring_end".upper(), "R_pinky_end".upper(), "R_index_end".upper(), "R_thumb_end".upper()
+]
+
 def add_dynamic_animation(gltf: GLTF2, gltf_animation: Animation, skeleton: Skeleton, animation_pkt: AnimationPacket, offset: int) -> bytes:
     animation_data = b''
     animation = animation_pkt.animation
 
-    bone_offset = skeleton.bone_count - animation.total_bones
+    bone_offset = 1
     logger.debug(f"{bone_offset=}")
     
     sample_times = numpy.array([index / animation.framerate for index in range(animation.dynamic_data.sample_count)], dtype=numpy.float32)
@@ -78,7 +137,16 @@ def add_dynamic_animation(gltf: GLTF2, gltf_animation: Animation, skeleton: Skel
     
     animation.dynamic_data.dequantize(animation.trs_anim_deq_factors, animation.translation_init_factors)
     if len(animation.dynamic_bones.translation) > 0:
+        logger.debug("Dynamic Translation Bones:")
         for j, bone in enumerate(animation.dynamic_bones.translation):
+            # if bone > 27:
+            #     continue
+            if bone+bone_offset >= len(skeleton.bones):
+                #bone_offset = skeleton.bone_count - animation.total_bones
+                continue
+            if skeleton.bones[bone+bone_offset].name.upper() in skips:
+                bone_offset += 1
+            logger.debug(f"    {bone+bone_offset}: {skeleton.bones[bone+bone_offset].name}")
             gltf_animation.channels.append(AnimationChannel(
                 sampler=len(gltf_animation.samplers),
                 target=AnimationChannelTarget(
@@ -113,8 +181,19 @@ def add_dynamic_animation(gltf: GLTF2, gltf_animation: Animation, skeleton: Skel
                 output=data_accessor
             ))
     
+    bone_offset = 1
+
     if len(animation.dynamic_bones.rotation) > 0:
+        logger.debug("Dynamic Rotation Bones:")
         for j, bone in enumerate(animation.dynamic_bones.rotation):
+            # if bone > 27:
+            #     continue
+            if bone+bone_offset >= len(skeleton.bones):
+                #bone_offset = skeleton.bone_count - animation.total_bones
+                continue
+            if skeleton.bones[bone+bone_offset].name.upper() in skips:
+                bone_offset += 1
+            logger.debug(f"    {bone+bone_offset}: {skeleton.bones[bone+bone_offset].name}")
             #print(animation.dynamic_data.rotation[:, j, :])
             rotation = Rotation.from_quat(animation.dynamic_data.rotation[:, j, :])
             initial_rotations = Rotation.from_quat(animation.dynamic_data.initial_rotations)
@@ -187,9 +266,18 @@ def add_static_pose(gltf: GLTF2, gltf_animation: Animation, skeleton: Skeleton, 
     offset += len(animation_data)
 
     animation.static_data.dequantize()
-    bone_offset = skeleton.bone_count - animation.total_bones
+    bone_offset = 1
     if len(animation.static_bones.translation) > 0:
+        logger.debug("Static Translation Bones:")
         for j, bone in enumerate(animation.static_bones.translation):
+            # if bone > 27:
+            #     continue
+            if bone+bone_offset >= len(skeleton.bones):
+                #bone_offset = skeleton.bone_count - animation.total_bones
+                continue
+            if skeleton.bones[bone+bone_offset].name.upper() in skips:
+                bone_offset += 1
+            logger.debug(f"    {bone+bone_offset}: {skeleton.bones[bone+bone_offset].name}")
             translation_data = animation.static_data.translation[j, :].flatten().tobytes()
             gltf_animation.channels.append(AnimationChannel(
                 sampler=len(gltf_animation.samplers),
@@ -224,8 +312,19 @@ def add_static_pose(gltf: GLTF2, gltf_animation: Animation, skeleton: Skeleton, 
                 output=data_accessor
             ))
 
+    bone_offset = 1
+
     if len(animation.static_bones.rotation) > 0:
+        logger.debug("Static Rotation Bones:")
         for j, bone in enumerate(animation.static_bones.rotation):
+            # if bone > 27:
+            #     continue
+            if bone+bone_offset >= len(skeleton.bones):
+                #bone_offset = skeleton.bone_count - animation.total_bones
+                continue
+            if skeleton.bones[bone+bone_offset].name.upper() in skips:
+                bone_offset += 1
+            logger.debug(f"    {bone+bone_offset}: {skeleton.bones[bone+bone_offset].name}")
             rotation = animation.static_data.rotation[j, :]
             gltf_animation.channels.append(AnimationChannel(
                 sampler=len(gltf_animation.samplers),
@@ -270,7 +369,7 @@ def main():
     parser.add_argument("--list-anims", "-a", action="store_true", help="List the available animations to export, then exit")
     parser.add_argument("--skeleton", "-s", type=str, default="", help="Name of the skeleton to export")
     parser.add_argument("--export-anims", "-e", nargs="*", type=str, help="Specific animation to export")
-    parser.add_argument("--output-file", "-o", type=str, help="Where to store the converted file. If not provided, will use the input filename and change the extension")
+    parser.add_argument("--output-file", "-o", type=str, help="Where to store the converted file. If not provided, will use the skeleton name")
     parser.add_argument("--format", "-f", choices=["gltf", "glb"], help="The output format to use, required for conversion")
     parser.add_argument("--verbose", "-v", help="Increase log level, can be specified multiple times", action="count", default=0)
     args = parser.parse_args()
@@ -308,7 +407,7 @@ def main():
     skeleton_index = mrn.skeleton_names_packet().skeletons.index_of(args.skeleton)
     skeleton = mrn.skeleton_packets()[skeleton_index].skeleton
     skeleton.calc_global_transforms()
-    #skeleton.pretty_print()
+    skeleton.pretty_print()
     path = Path(args.output_file if args.output_file else "export/animations/" + args.skeleton + ".gltf")
 
     gltf = GLTF2()
@@ -323,7 +422,7 @@ def main():
         
         if name in animations_added:
             continue
-        
+
         animations_added.add(name)
 
         logger.info(f"\t{i: 3d}: {name}")

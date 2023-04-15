@@ -207,6 +207,12 @@ class Skeleton:
     
     def name(self) -> str:
         return self.bones[1].name
+    
+    def index(self, bone_name: str) -> int:
+        for i, bone in enumerate(self.bones):
+            if bone.name.upper() == bone_name.upper():
+                return i
+        return None
 
 @dataclass
 class Factors:
