@@ -66,6 +66,10 @@ class Bone:
 
     def __repr__(self) -> str:
         return f"Bone(name='{self.name}', offset={self.offset}, rotation={self.rotation.as_quat()}, children={self.children})"
+    
+    @classmethod
+    def FAKE(cls) -> 'Bone':
+        return cls("FAKE", -1, numpy.array((0, 0, 0), dtype=numpy.float32), Rotation.identity(), [])
 
 @dataclass
 class BoneHierarchyEntry:
@@ -208,11 +212,6 @@ class Skeleton:
     def name(self) -> str:
         return self.bones[1].name
     
-    def index(self, bone_name: str) -> int:
-        for i, bone in enumerate(self.bones):
-            if bone.name.upper() == bone_name.upper():
-                return i
-        return None
 
 @dataclass
 class Factors:

@@ -1,0 +1,382 @@
+{
+    "CharacterWorldSpaceTM": {
+        "start": 0,
+        "end": 0,
+        "frozen": true
+    },
+    "Male": {
+        "start": 1,
+        "end": 1,
+        "frozen": true
+    },
+    "worldRoot": {
+        "start": 2,
+        "end": 2,
+        "frozen": true
+    },
+    "COG": {
+        "start": 3,
+        "end": 3,
+        "frozen": true
+    },
+    "pelvis": {
+        "start": 4,
+        "end": 4,
+        "frozen": true
+    },
+    "R_hip": {
+        "start": 5,
+        "end": 5,
+        "frozen": true
+    },
+    "R_knee": {
+        "start": 6,
+        "end": 6,
+        "frozen": true
+    },
+    "R_ankle": {
+        "start": 7,
+        "end": 7,
+        "frozen": true
+    },
+    "R_ball": {
+        "start": 8,
+        "end": 8,
+        "frozen": true
+    },
+    "R_toe": {
+        "start": 9,
+        "end": 70,
+        "frozen": false
+    },
+    "L_hip": {
+        "start": 10,
+        "end": 9,
+        "frozen": true
+    },
+    "L_knee": {
+        "start": 11,
+        "end": 10,
+        "frozen": true
+    },
+    "L_ankle": {
+        "start": 12,
+        "end": 11,
+        "frozen": true
+    },
+    "L_ball": {
+        "start": 13,
+        "end": 12,
+        "frozen": true
+    },
+    "L_toe": {
+        "start": 14,
+        "end": 43,
+        "frozen": false
+    },
+    "spineLower": {
+        "start": 15,
+        "end": 13,
+        "frozen": true
+    },
+    "spineMiddle": {
+        "start": 16,
+        "end": 14,
+        "frozen": true
+    },
+    "spineUpper": {
+        "start": 17,
+        "end": 15,
+        "frozen": true
+    },
+    "L_clavicle": {
+        "start": 18,
+        "end": 16,
+        "frozen": true
+    },
+    "L_shoulder": {
+        "start": 19,
+        "end": 17,
+        "frozen": true
+    },
+    "L_elbow": {
+        "start": 20,
+        "end": 18,
+        "frozen": true
+    },
+    "L_wrist": {
+        "start": 21,
+        "end": 19,
+        "frozen": true
+    },
+    "L_middleA": {
+        "start": 22,
+        "end": 45,
+        "frozen": true
+    },
+    "L_middleB": {
+        "start": 23,
+        "end": 47,
+        "frozen": true
+    },
+    "L_middleC": {
+        "start": 24,
+        "end": 48,
+        "frozen": true
+    },
+    "L_middle_end": {
+        "start": 25,
+        "end": 69,
+        "frozen": false
+    },
+    "L_ringA": {
+        "start": 26,
+        "end": 71, 
+        "frozen": true
+    },
+    "L_ringB": {
+        "start": 27,
+        "end": 72, 
+        "frozen": true
+    },
+    "L_ringC": {
+        "start": 28,
+        "end": 74, 
+        "frozen": true
+    },
+    "L_ring_end": {
+        "start": 29,
+        "end": 75, 
+        "frozen": true
+    },
+    "L_pinkyA": {
+        "start": 30,
+        "end": 29,
+        "frozen": true
+    },
+    "L_pinkyB": {
+        "start": 31,
+        "end": 30,
+        "frozen": true
+    },
+    "L_pinkyC": {
+        "start": 32,
+        "end": 31,
+        "frozen": true
+    },
+    "L_pinky_end": {
+        "start": 33,
+        "end": 32,
+        "frozen": true
+    },
+    "L_indexA": {
+        "start": 34,
+        "end": 33,
+        "frozen": true
+    },
+    "L_indexB": {
+        "start": 35,
+        "end": 34,
+        "frozen": true
+    },
+    "L_indexC": {
+        "start": 36,
+        "end": 35,
+        "frozen": true
+    },
+    "L_index_end": {
+        "start": 37,
+        "end": 36,
+        "frozen": true
+    },
+    "L_thumbA": {
+        "start": 38,
+        "end": 37,
+        "frozen": true
+    },
+    "L_thumbB": {
+        "start": 39,
+        "end": 38,
+        "frozen": true
+    },
+    "L_thumbC": {
+        "start": 40,
+        "end": 39,
+        "frozen": true
+    },
+    "L_thumb_end": {
+        "start": 41,
+        "end": 40,
+        "frozen": true
+    },
+    "L_weapon": {
+        "start": 42,
+        "end": 20,
+        "frozen": true
+    },
+    "L_forearm": {
+        "start": 43,
+        "end": 41,
+        "frozen": true
+    },
+    "L_shoulderRoll": {
+        "start": 44,
+        "end": 42,
+        "frozen": true
+    },
+    "R_clavicle": {
+        "start": 45,
+        "end": 21,
+        "frozen": true
+    },
+    "R_shoulder": {
+        "start": 46,
+        "end": 22,
+        "frozen": true
+    },
+    "R_shoulderRoll": {
+        "start": 47,
+        "end": 46,
+        "frozen": true
+    },
+    "R_elbow": {
+        "start": 48,
+        "end": 23,
+        "frozen": true
+    },
+    "R_wrist": {
+        "start": 49,
+        "end": 24,
+        "frozen": true
+    },
+    "R_middleA": {
+        "start": 50,
+        "end": 49,
+        "frozen": false
+    },
+    "R_middleB": {
+        "start": 51,
+        "end": 50,
+        "frozen": false
+    },
+    "R_middleC": {
+        "start": 52,
+        "end": 51,
+        "frozen": false
+    },
+    "R_middle_end": {
+        "start": 53,
+        "end": 52,
+        "frozen": false
+    },
+    "R_indexA": {
+        "start": 54,
+        "end": 53,
+        "frozen": false
+    },
+    "R_indexB": {
+        "start": 55,
+        "end": 54,
+        "frozen": false
+    },
+    "R_indexC": {
+        "start": 56,
+        "end": 55,
+        "frozen": false
+    },
+    "R_index_end": {
+        "start": 57,
+        "end": 56,
+        "frozen": false
+    },
+    "R_ringA": {
+        "start": 58,
+        "end": 57,
+        "frozen": false
+    },
+    "R_ringB": {
+        "start": 59,
+        "end": 58,
+        "frozen": false
+    },
+    "R_ringC": {
+        "start": 60,
+        "end": 59,
+        "frozen": false
+    },
+    "R_ring_end": {
+        "start": 61,
+        "end": 60,
+        "frozen": false
+    },
+    "R_pinkyA": {
+        "start": 62,
+        "end": 61,
+        "frozen": false
+    },
+    "R_pinkyB": {
+        "start": 63,
+        "end": 62,
+        "frozen": false
+    },
+    "R_pinkyC": {
+        "start": 64,
+        "end": 63,
+        "frozen": false
+    },
+    "R_pinky_end": {
+        "start": 65,
+        "end": 64,
+        "frozen": false
+    },
+    "R_thumbA": {
+        "start": 66,
+        "end": 65,
+        "frozen": false
+    },
+    "R_thumbB": {
+        "start": 67,
+        "end": 66,
+        "frozen": false
+    },
+    "R_thumbC": {
+        "start": 68,
+        "end": 67,
+        "frozen": false
+    },
+    "R_thumb_end": {
+        "start": 69,
+        "end": 68,
+        "frozen": false
+    },
+    "R_weapon": {
+        "start": 70,
+        "end": 25,
+        "frozen": true
+    },
+    "R_forearm": {
+        "start": 71,
+        "end": 44,
+        "frozen": false
+    },
+    "neck": {
+        "start": 72,
+        "end": 26,
+        "frozen": true
+    },
+    "head": {
+        "start": 73,
+        "end": 27,
+        "frozen": true
+    },
+    "head_end": {
+        "start": 74,
+        "end": 73,
+        "frozen": false
+    },
+    "trajectory": {
+        "start": 75,
+        "end": 28,
+        "frozen": true
+    }
+}
