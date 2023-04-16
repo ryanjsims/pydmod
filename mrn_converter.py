@@ -66,11 +66,11 @@ skips = [
     #"R_middle_end".upper(), "R_ring_end".upper(), "R_pinky_end".upper(), "R_index_end".upper(), "R_thumb_end".upper()
 ]
 
-def add_dynamic_animation(gltf: GLTF2, gltf_animation: Animation, skeleton: Skeleton, animation_pkt: AnimationPacket, offset: int) -> bytes:
+def add_dynamic_animation(gltf: GLTF2, gltf_animation: Animation, skeleton: Skeleton, animation_pkt: AnimationPacket, offset: int, exclude_end_data: bool = False) -> bytes:
     animation_data = b''
     animation = animation_pkt.animation
 
-    bone_offset = 1
+    bone_offset = skeleton.bone_count - animation.total_bones
     logger.debug(f"{bone_offset=}")
     
     sample_times = numpy.array([index / animation.framerate for index in range(animation.dynamic_data.sample_count)], dtype=numpy.float32)
@@ -91,6 +91,77 @@ def add_dynamic_animation(gltf: GLTF2, gltf_animation: Animation, skeleton: Skel
     ))
 
     offset += len(animation_data)
+
+    if not exclude_end_data and len(animation.end_data.translation_data) != 0:
+        animation.end_data.dequantize()
+
+        gltf_animation.channels.append(AnimationChannel(
+            sampler=len(gltf_animation.samplers),
+            target=AnimationChannelTarget(
+                node=0,
+                path="translation"
+            ),
+            extras = {
+                "bone_name": f"{skeleton.bones[0].name}"
+            }
+        ))
+
+        data_accessor = len(gltf.accessors)
+        #print(animation.dynamic_data.translation[:, j, :] + skeleton.bones[bone].global_offset)
+        translation_data = animation.end_data.translation.flatten().tobytes()
+        gltf.accessors.append(Accessor(
+            bufferView=len(gltf.bufferViews),
+            componentType=FLOAT,
+            count=len(sample_times),
+            type=VEC3
+        ))
+        gltf.bufferViews.append(BufferView(
+            buffer=len(gltf.buffers),
+            byteOffset=offset,
+            byteLength=len(translation_data)
+        ))
+
+        animation_data += translation_data
+        offset += len(translation_data)
+
+        gltf_animation.samplers.append(AnimationSampler(
+            input=time_accessor,
+            output=data_accessor
+        ))
+    
+    if not exclude_end_data and animation.end_data.rotation is not None:
+        gltf_animation.channels.append(AnimationChannel(
+            sampler=len(gltf_animation.samplers),
+            target=AnimationChannelTarget(
+                node=0,
+                path="rotation"
+            ),
+            extras = {
+                "bone_name": f"{skeleton.bones[0].name}"
+            }
+        ))
+
+        data_accessor = len(gltf.accessors)
+        rotation_data = animation.end_data.rotation.flatten().tobytes()
+        gltf.accessors.append(Accessor(
+            bufferView=len(gltf.bufferViews),
+            componentType=FLOAT,
+            count=len(sample_times),
+            type=VEC4
+        ))
+        gltf.bufferViews.append(BufferView(
+            buffer=len(gltf.buffers),
+            byteOffset=offset,
+            byteLength=len(rotation_data)
+        ))
+
+        animation_data += rotation_data
+        offset += len(rotation_data)
+
+        gltf_animation.samplers.append(AnimationSampler(
+            input=time_accessor,
+            output=data_accessor
+        ))
     
     animation.dynamic_data.dequantize(animation.trs_anim_deq_factors, animation.translation_init_factors)
     if len(animation.dynamic_bones.translation) > 0:
@@ -131,8 +202,6 @@ def add_dynamic_animation(gltf: GLTF2, gltf_animation: Animation, skeleton: Skel
                 output=data_accessor
             ))
     
-    bone_offset = 1
-
     if len(animation.dynamic_bones.rotation) > 0:
         logger.debug("Dynamic Rotation Bones:")
         for j, bone in enumerate(animation.dynamic_bones.rotation):
@@ -209,7 +278,7 @@ def add_static_pose(gltf: GLTF2, gltf_animation: Animation, skeleton: Skeleton, 
     offset += len(animation_data)
 
     animation.static_data.dequantize()
-    bone_offset = 1
+    bone_offset = skeleton.bone_count - animation.total_bones
     if len(animation.static_bones.translation) > 0:
         logger.debug("Static Translation Bones:")
         for j, bone in enumerate(animation.static_bones.translation):
@@ -247,8 +316,6 @@ def add_static_pose(gltf: GLTF2, gltf_animation: Animation, skeleton: Skeleton, 
                 input=time_accessor,
                 output=data_accessor
             ))
-
-    bone_offset = 1
 
     if len(animation.static_bones.rotation) > 0:
         logger.debug("Static Rotation Bones:")
@@ -302,6 +369,7 @@ def main():
     parser.add_argument("--format", "-f", choices=["gltf", "glb"], help="The output format to use, required for conversion")
     parser.add_argument("--verbose", "-v", help="Increase log level, can be specified multiple times", action="count", default=0)
     parser.add_argument("--remap", "-r", type=str, help="Use a bone map to remap the indices bones are placed at. Used for ThirdPersonX64.mrn since its skeleton does not have the correct indices.")
+    parser.add_argument("--exclude-global", "-g", action="store_true", help="Exclude global transform from the animation, so the character stays at the origin during the animation")
     args = parser.parse_args()
 
     logging.basicConfig(level=max(logging.WARNING - 10 * args.verbose, logging.DEBUG), handlers=[handler])
@@ -374,7 +442,7 @@ def main():
             
 
         if animation.dynamic_data is not None:
-            animation_data += add_dynamic_animation(gltf, gltf_animation, skeleton, animation_packet, len(animation_data))
+            animation_data += add_dynamic_animation(gltf, gltf_animation, skeleton, animation_packet, len(animation_data), args.exclude_global)
         
         gltf.buffers.append(Buffer(
             byteLength=len(animation_data),

@@ -499,6 +499,103 @@ class AnimationSecondSegment:
         return cls(frame_count, trs_counts, trs_data, trs_factor_indices, end_data_offset - base)
 
 @dataclass
+class AnimationEndSegment:
+    version: int
+    size: int
+    alignment: int
+    sample_rate: float
+    sample_count: int
+    translation_factors: Factors
+    rotation_factors: Optional[Factors]
+    const_rotation: Optional[Rotation]
+    translation_data: bytes
+    rotation_data: bytes
+    translation: numpy.ndarray = None
+    rotation: numpy.ndarray = None
+
+    def dequantize(self):
+        if len(self.translation_data) == 0 and len(self.rotation_data) == 0:
+            logger.debug("AnimationEndSegment: No data to dequantize")
+            return
+        
+        def unpack_pos(packed_pos: Tuple[int, int, int], factors: Factors):
+            dequant_x = factors.q_extent[0] * packed_pos[0] + factors.q_min[0]
+            dequant_y = factors.q_extent[1] * packed_pos[1] + factors.q_min[1]
+            dequant_z = factors.q_extent[2] * packed_pos[2] + factors.q_min[2]
+            return dequant_x, dequant_y, dequant_z
+        
+        def unpack_rotation(packed_rot: Tuple[int, int, int], factors: Factors):
+            dequant_x = factors.q_extent[0] * (packed_rot[0]) + factors.q_min[0]
+            dequant_y = factors.q_extent[1] * (packed_rot[1]) + factors.q_min[1]
+            dequant_z = factors.q_extent[2] * (packed_rot[2]) + factors.q_min[2]
+
+            vec_squared = dequant_x * dequant_x + dequant_y * dequant_y + dequant_z * dequant_z
+            dequant_w = vec_squared + 1.0
+
+            temp = 2.0 / dequant_w
+            output_w = (1.0 - vec_squared) / (1.0 + vec_squared)
+            output_x = temp * dequant_x
+            output_y = temp * dequant_y
+            output_z = temp * dequant_z
+            return output_x, output_y, output_z, output_w
+
+        translation: List[Tuple[float, float, float]] = []
+        rotation: List[Tuple[float, float, float, float]] = []
+        for sample in range(self.sample_count):
+            data_offset = sample * 4
+            value = struct.unpack("<I", self.translation_data[data_offset:data_offset+4])[0]
+            # 11 bits for x and y, 10 bits for z
+            pos_quant = ((value >> 21) & 0x7FF, (value >> 10) & 0x7FF, value & 0x3FF)
+
+            translation.append(unpack_pos(pos_quant, self.translation_factors))
+
+            if self.rotation_factors is None:
+                continue
+
+            data_offset = sample * 6
+            rot_quant = struct.unpack("<HHH", self.rotation_data[data_offset : data_offset + 6])
+            rot = unpack_rotation(rot_quant, self.rotation_factors)
+            rotation.append(rot)
+
+        self.translation = numpy.array(translation, dtype=numpy.float32)
+        self.rotation = numpy.array(rotation if self.rotation_factors is not None else [self.const_rotation] * self.sample_count, dtype=numpy.float32)
+
+    @classmethod
+    def load(cls, data: BytesIO) -> 'AnimationEndSegment':
+        logger.info("Loading AnimationEndSegment...")
+        base = data.tell()
+        version = struct.unpack("<I", data.read(4))[0]
+        data.read(12)
+        size, alignment, sample_rate, sample_count = struct.unpack("<IIfI", data.read(16))
+        translation_factors_floats = struct.unpack("<ffffff", data.read(24))
+        translation_factors = Factors(translation_factors_floats[:3], translation_factors_floats[3:])
+        rotation_float_data = data.read(16)
+        rotation_pad_data = data.read(8)
+        rotation_factors = None
+        rotation = None
+        if struct.unpack("<Q", rotation_pad_data)[0] != 0:
+            rotation_factors_floats = struct.unpack("<ffffff", rotation_float_data + rotation_pad_data)
+            rotation_factors = Factors(rotation_factors_floats[:3], rotation_factors_floats[3:])
+        else:
+            rotation = struct.unpack("<ffff", rotation_float_data)
+            logger.info(f"Quat: {rotation}")
+        
+        translation_data_offset = struct.unpack("<Q", data.read(8))[0]
+        rotation_data_offset = struct.unpack("<Q", data.read(8))[0]
+        translation_data = b''
+        rotation_data = b''
+        if translation_data_offset != 0:
+            data.seek(base + translation_data_offset)
+            translation_data = data.read(4 * sample_count)
+        if rotation_data_offset != 0:
+            data.seek(base + rotation_data_offset)
+            rotation_data = data.read(6 * sample_count)
+        logger.info("Loaded AnimationEndSegment")
+        return cls(version, size, alignment, sample_rate, sample_count, translation_factors, rotation_factors, rotation, translation_data, rotation_data)
+
+
+
+@dataclass
 class Animation:
     crc32hash: int
     version: int # Not actually sure if this is a version or not
@@ -516,7 +613,7 @@ class Animation:
 
     static_data: AnimationFirstSegment
     dynamic_data: AnimationSecondSegment
-    end_data: bytes
+    end_data: AnimationEndSegment
     size: int
     
     @classmethod
@@ -612,8 +709,11 @@ class Animation:
         else:
             dynamic_data = None
 
-        data.seek(base + end_data_offset)
-        end_data = data.read(96)
+        if end_data_offset != 0:
+            data.seek(base + end_data_offset)
+            end_data = AnimationEndSegment.load(data)
+        else:
+            end_data = None
 
         return cls(crc32hash, version, unknown1, unknown2, unknown_float1, unknown_float2, unknown3, unknown4, static_bones, dynamic_bones, translation_init_factors, trs_anim_deq_counts, trs_anim_deq_factors, static_data, dynamic_data, end_data, data.tell() - base)
 
