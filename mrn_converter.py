@@ -21,6 +21,7 @@ def add_skeleton_to_gltf(gltf: GLTF2, skeleton: Skeleton, skeleton_name: str, bo
     joints = []
     matrices_bin = b''
     if bone_map is not None:
+        logger.info("Remapping skeleton...")
         remapped_bones = [Bone.FAKE()] * len(skeleton.bones)
         for bone in skeleton.bones:
             bone.index = bone_map[bone.name]["end"]
